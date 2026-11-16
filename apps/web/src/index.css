@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+/* Tokens de tema: las clases Tailwind (bg-surface-1, text-fg-muted…) apuntan a variables CSS,
+   así cambiar de tema/acento/tamaño de fuente es solo cambiar variables (Fase 6). */
+@theme {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+}
+
+:root {
+  --surface-0: #111113;
+  --surface-1: #18181b;
+  --surface-2: #1f1f23;
+  --surface-3: #2a2a30;
+  --fg: #f4f4f5;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --accent: #6366f1;
+  --danger: #ef4444;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --font-scale: 1;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --surface-0: #e4e4e7;
+  --surface-1: #f4f4f5;
+  --surface-2: #ffffff;
+  --surface-3: #e4e4e7;
+  --fg: #18181b;
+  --fg-muted: #52525b;
+  --fg-subtle: #71717a;
+  color-scheme: light;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale));
+}
+
+body {
+  margin: 0;
+  background: var(--surface-2);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+
+@utility input {
+  @apply w-full rounded-md bg-surface-0 px-3 py-2 text-sm text-fg outline-none ring-accent placeholder:text-fg-subtle focus:ring-2;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-white hover:brightness-110;
+}
+@utility btn-ghost {
+  @apply btn text-fg-muted hover:bg-surface-3 hover:text-fg;
+}
+@utility btn-danger {
+  @apply btn bg-danger text-white hover:brightness-110;
+}

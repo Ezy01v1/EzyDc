@@ -1,0 +1,45 @@
+{
+  "name": "@ezydc/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch --preserveWatchOutput",
+    "build": "prisma generate && nest build",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@ezydc/shared": "workspace:*",
+    "@nestjs/common": "^11.0.11",
+    "@nestjs/core": "^11.0.11",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.11",
+    "@nestjs/platform-socket.io": "^11.0.11",
+    "@nestjs/throttler": "^6.4.0",
+    "@nestjs/websockets": "^11.0.11",
+    "@node-rs/argon2": "^2.0.2",
+    "@prisma/client": "^6.5.0",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "compression": "^1.8.0",
+    "cookie-parser": "^1.4.7",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.6.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "socket.io": "^4.8.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.5",
+    "@types/compression": "^1.7.5",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "prisma": "^6.5.0",
+    "typescript": "^5.7.3"
+  }
+}

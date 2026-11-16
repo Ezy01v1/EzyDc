@@ -1,0 +1,507 @@
+// Esquema COMPLETO (todas las fases). La Fase 1 usa: User, Session, UserSettings,
+// Server, Member, Role, MemberRole, Channel, PermissionOverwrite, Message, Invite.
+// El resto ya está modelado para que las fases siguientes no requieran rediseño.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // URL con pooler (Neon: -pooler / Supabase: :6543?pgbouncer=true)
+  directUrl = env("DIRECT_URL")   // URL directa, solo para migraciones
+}
+
+enum UserStatus {
+  ONLINE
+  IDLE
+  DND
+  INVISIBLE
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+  ANNOUNCEMENT
+  CATEGORY
+  DM
+  GROUP_DM
+  THREAD
+}
+
+enum OverwriteType {
+  ROLE
+  MEMBER
+}
+
+enum MessageType {
+  DEFAULT
+  REPLY
+  MEMBER_JOIN
+  THREAD_STARTER
+  WEBHOOK
+}
+
+enum RelationshipType {
+  FRIEND
+  BLOCKED
+  PENDING_INCOMING
+  PENDING_OUTGOING
+}
+
+enum NotificationLevel {
+  ALL
+  MENTIONS
+  NONE
+}
+
+// ───────────────────────── Cuentas ─────────────────────────
+
+model User {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  email        String     @unique @db.VarChar(254)
+  username     String     @unique @db.VarChar(32)
+  displayName  String?    @map("display_name") @db.VarChar(32)
+  passwordHash String     @map("password_hash")
+  avatarUrl    String?    @map("avatar_url")
+  bannerUrl    String?    @map("banner_url")
+  bio          String?    @db.VarChar(190)
+  customStatus String?    @map("custom_status") @db.VarChar(128)
+  status       UserStatus @default(ONLINE)
+  isBot        Boolean    @default(false) @map("is_bot")
+  totpSecret   String?    @map("totp_secret") // cifrado en reposo (fase 2FA)
+  totpEnabled  Boolean    @default(false) @map("totp_enabled")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  sessions          Session[]
+  settings          UserSettings?
+  ownedServers      Server[]              @relation("ServerOwner")
+  memberships       Member[]
+  messages          Message[]
+  reactions         Reaction[]
+  dmChannels        DmParticipant[]
+  readStates        ReadState[]
+  notificationPrefs NotificationSetting[]
+  pushSubscriptions PushSubscription[]
+  userMentions      MessageUserMention[]
+  bans              Ban[]
+  relationships     Relationship[]        @relation("RelFrom")
+  relatedBy         Relationship[]        @relation("RelTo")
+  botApplication    Application?          @relation("BotUser")
+  applications      Application[]         @relation("AppOwner")
+
+  @@map("users")
+}
+
+model Session {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @map("token_hash") // sha256 del secreto del refresh token
+  prevTokenHash String?   @map("prev_token_hash") // ventana de gracia para pestañas concurrentes
+  rotatedAt     DateTime? @map("rotated_at")
+  userAgent     String?   @map("user_agent") @db.VarChar(256)
+  ip            String?   @db.VarChar(64)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastUsedAt    DateTime  @default(now()) @map("last_used_at")
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model UserSettings {
+  userId      String @id @map("user_id") @db.Uuid
+  theme       String @default("dark") @db.VarChar(16) // dark | light | custom
+  accentColor Int?   @map("accent_color")
+  fontScale   Int    @default(100) @map("font_scale") // porcentaje
+  customTheme Json?  @map("custom_theme")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model Relationship {
+  userId    String           @map("user_id") @db.Uuid
+  targetId  String           @map("target_id") @db.Uuid
+  type      RelationshipType
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user   User @relation("RelFrom", fields: [userId], references: [id], onDelete: Cascade)
+  target User @relation("RelTo", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([userId, targetId])
+  @@index([targetId])
+  @@map("relationships")
+}
+
+// ───────────────────────── Servidores ─────────────────────────
+
+model Server {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @db.VarChar(100)
+  iconUrl   String?  @map("icon_url")
+  ownerId   String   @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner       User         @relation("ServerOwner", fields: [ownerId], references: [id])
+  members     Member[]
+  roles       Role[]
+  channels    Channel[]
+  invites     Invite[]
+  emojis      Emoji[]
+  bans        Ban[]
+  auditLogs   AuditLog[]
+  webhooks    Webhook[]
+  wordFilters WordFilter[]
+
+  @@index([ownerId])
+  @@map("servers")
+}
+
+model Member {
+  serverId      String    @map("server_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  nickname      String?   @db.VarChar(32)
+  joinedAt      DateTime  @default(now()) @map("joined_at")
+  timeoutUntil  DateTime? @map("timeout_until") // moderación: timeout
+
+  server Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles  MemberRole[]
+
+  @@id([serverId, userId]) // también sirve para paginar miembros por cursor (user_id)
+  @@index([userId]) // "mis servidores"
+  @@map("members")
+}
+
+/// El rol @everyone tiene id = server.id (como en Discord): se obtiene sin búsqueda.
+model Role {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  serverId    String   @map("server_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  color       Int      @default(0)
+  position    Int      @default(0) // jerarquía: mayor = más poder
+  permissions BigInt   @default(0)
+  hoist       Boolean  @default(false)
+  mentionable Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  server  Server       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  members MemberRole[]
+
+  @@index([serverId, position])
+  @@map("roles")
+}
+
+model MemberRole {
+  serverId String @map("server_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  roleId   String @map("role_id") @db.Uuid
+
+  member Member @relation(fields: [serverId, userId], references: [serverId, userId], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([serverId, userId, roleId])
+  @@index([roleId])
+  @@map("member_roles")
+}
+
+/// Canales de servidor, categorías (type=CATEGORY), DMs, grupos e hilos (type=THREAD, parent=canal).
+model Channel {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  serverId         String?     @map("server_id") @db.Uuid
+  parentId         String?     @map("parent_id") @db.Uuid
+  type             ChannelType
+  name             String?     @db.VarChar(100)
+  topic            String?     @db.VarChar(1024)
+  position         Int         @default(0)
+  slowmodeSeconds  Int         @default(0) @map("slowmode_seconds")
+  nsfw             Boolean     @default(false)
+  userLimit        Int?        @map("user_limit") // voz
+  ownerId          String?     @map("owner_id") @db.Uuid // grupo DM / hilo
+  starterMessageId String?     @unique @map("starter_message_id") @db.Uuid // hilos
+  lastMessageId    String?     @map("last_message_id") @db.Uuid // no leídos sin COUNT(*)
+  archived         Boolean     @default(false)
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  server       Server?               @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  parent       Channel?              @relation("ChannelTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Channel[]             @relation("ChannelTree")
+  messages     Message[]
+  overwrites   PermissionOverwrite[]
+  participants DmParticipant[]
+  invites      Invite[]
+  readStates   ReadState[]
+  webhooks     Webhook[]
+
+  @@index([serverId, position])
+  @@index([parentId])
+  @@map("channels")
+}
+
+model PermissionOverwrite {
+  channelId String        @map("channel_id") @db.Uuid
+  targetId  String        @map("target_id") @db.Uuid // role.id o user.id
+  type      OverwriteType
+  allow     BigInt        @default(0)
+  deny      BigInt        @default(0)
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, targetId])
+  @@map("permission_overwrites")
+}
+
+model DmParticipant {
+  channelId String   @map("channel_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  closed    Boolean  @default(false) // DM oculto de la lista
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@index([userId])
+  @@map("dm_participants")
+}
+
+// ───────────────────────── Mensajería ─────────────────────────
+
+model Message {
+  id              String      @id @default(uuid(7)) @db.Uuid // UUIDv7: ordenado por tiempo
+  channelId       String      @map("channel_id") @db.Uuid
+  authorId        String?     @map("author_id") @db.Uuid // null si viene de webhook
+  webhookId       String?     @map("webhook_id") @db.Uuid
+  type            MessageType @default(DEFAULT)
+  content         String      @db.VarChar(4000)
+  replyToId       String?     @map("reply_to_id") @db.Uuid
+  mentionEveryone Boolean     @default(false) @map("mention_everyone")
+  pinned          Boolean     @default(false)
+  embeds          Json? // previews de enlaces (fase 3)
+  editedAt        DateTime?   @map("edited_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  channel      Channel              @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author       User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  replyTo      Message?             @relation("Replies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]            @relation("Replies")
+  attachments  Attachment[]
+  reactions    Reaction[]
+  userMentions MessageUserMention[]
+  roleMentions MessageRoleMention[]
+
+  // Índice principal: historial por canal con cursor (equivale a (channel_id, created_at)).
+  @@index([channelId, id(sort: Desc)])
+  // Búsqueda "from:usuario" y borrado masivo en moderación.
+  @@index([authorId, id(sort: Desc)])
+  @@map("messages")
+}
+
+model Attachment {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  messageId   String  @map("message_id") @db.Uuid
+  url         String
+  filename    String  @db.VarChar(255)
+  contentType String  @map("content_type") @db.VarChar(127)
+  size        Int
+  width       Int?
+  height      Int?
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+model Reaction {
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String   @db.VarChar(64) // unicode o "c:<emojiId>"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, emoji, userId])
+  @@map("reactions")
+}
+
+model MessageUserMention {
+  messageId String @map("message_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+  @@index([userId, messageId(sort: Desc)]) // bandeja "menciones recientes"
+  @@map("message_user_mentions")
+}
+
+model MessageRoleMention {
+  messageId String @map("message_id") @db.Uuid
+  roleId    String @map("role_id") @db.Uuid
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, roleId])
+  @@map("message_role_mentions")
+}
+
+model Emoji {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  serverId  String   @map("server_id") @db.Uuid
+  name      String   @db.VarChar(32)
+  imageUrl  String   @map("image_url")
+  animated  Boolean  @default(false)
+  creatorId String?  @map("creator_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, name])
+  @@map("emojis")
+}
+
+model Invite {
+  code      String    @id @db.VarChar(16)
+  serverId  String    @map("server_id") @db.Uuid
+  channelId String?   @map("channel_id") @db.Uuid
+  inviterId String?   @map("inviter_id") @db.Uuid
+  maxUses   Int?      @map("max_uses")
+  uses      Int       @default(0)
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  server  Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  @@index([serverId])
+  @@map("invites")
+}
+
+// ───────────────────────── Notificaciones ─────────────────────────
+
+model ReadState {
+  userId            String  @map("user_id") @db.Uuid
+  channelId         String  @map("channel_id") @db.Uuid
+  lastReadMessageId String? @map("last_read_message_id") @db.Uuid
+  mentionCount      Int     @default(0) @map("mention_count")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([userId, channelId])
+  @@map("read_states")
+}
+
+model NotificationSetting {
+  userId    String            @map("user_id") @db.Uuid
+  targetId  String            @map("target_id") @db.Uuid // server.id o channel.id
+  level     NotificationLevel @default(ALL)
+  muted     Boolean           @default(false)
+  muteUntil DateTime?         @map("mute_until")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, targetId])
+  @@map("notification_settings")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ───────────────────────── Moderación ─────────────────────────
+
+model Ban {
+  serverId    String   @map("server_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  moderatorId String?  @map("moderator_id") @db.Uuid
+  reason      String?  @db.VarChar(512)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([serverId, userId])
+  @@map("bans")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  serverId  String   @map("server_id") @db.Uuid
+  actorId   String?  @map("actor_id") @db.Uuid
+  action    String   @db.VarChar(64) // MEMBER_KICK, CHANNEL_UPDATE, ...
+  targetId  String?  @map("target_id") @db.Uuid
+  changes   Json?
+  reason    String?  @db.VarChar(512)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, id(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model WordFilter {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  serverId  String   @map("server_id") @db.Uuid
+  pattern   String   @db.VarChar(200)
+  action    String   @default("BLOCK") @db.VarChar(16) // BLOCK | FLAG | TIMEOUT
+  createdAt DateTime @default(now()) @map("created_at")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@map("word_filters")
+}
+
+// ───────────────────────── Bots y webhooks ─────────────────────────
+
+model Application {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  botUserId String   @unique @map("bot_user_id") @db.Uuid
+  name      String   @db.VarChar(64)
+  tokenHash String   @map("token_hash")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner   User @relation("AppOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  botUser User @relation("BotUser", fields: [botUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("applications")
+}
+
+model Webhook {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  serverId  String   @map("server_id") @db.Uuid
+  channelId String   @map("channel_id") @db.Uuid
+  name      String   @db.VarChar(80)
+  avatarUrl String?  @map("avatar_url")
+  tokenHash String   @map("token_hash")
+  creatorId String?  @map("creator_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  server  Server  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@map("webhooks")
+}

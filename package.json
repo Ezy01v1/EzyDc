@@ -1,0 +1,16 @@
+{
+  "name": "ezydc",
+  "private": true,
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "predev": "pnpm --filter @ezydc/shared build",
+    "dev": "pnpm -r --parallel --stream dev",
+    "build": "pnpm --filter @ezydc/shared build && pnpm --filter @ezydc/api build && pnpm --filter @ezydc/web build",
+    "typecheck": "pnpm --filter @ezydc/shared build && pnpm -r typecheck",
+    "db:migrate": "pnpm --filter @ezydc/api db:migrate",
+    "db:deploy": "pnpm --filter @ezydc/api db:deploy"
+  }
+}

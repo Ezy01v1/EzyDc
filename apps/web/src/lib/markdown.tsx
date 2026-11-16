@@ -1,0 +1,76 @@
+import type { ReactNode } from 'react';
+
+/**
+ * Markdown mínimo y SEGURO: genera nodos React (texto escapado por React), nunca innerHTML.
+ * Soporta: ```bloques```, `código`, **negrita**, *cursiva* / _cursiva_, ~~tachado~~,
+ * > citas y enlaces http(s) (otros esquemas como javascript: nunca se convierten en enlace).
+ * Resaltado de sintaxis: Fase 3, cargado con import() solo si hay bloques de código.
+ */
+export function renderMarkdown(src: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const fence = /```([\w+-]*)\n?([\s\S]*?)```/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = fence.exec(src))) {
+    if (m.index > last) out.push(...renderLines(src.slice(last, m.index), () => key++));
+    out.push(
+      <pre key={`pre${key++}`} className="my-1 overflow-x-auto rounded-md bg-surface-0 p-3 text-[0.85em] leading-relaxed">
+        <code data-lang={m[1] || undefined}>{m[2]?.replace(/\n$/, '')}</code>
+      </pre>,
+    );
+    last = fence.lastIndex;
+  }
+  if (last < src.length) out.push(...renderLines(src.slice(last), () => key++));
+  return out;
+}
+
+function renderLines(text: string, nextKey: () => number): ReactNode[] {
+  return text.split('\n').map((line, i, arr) => {
+    const k = nextKey();
+    const isQuote = line.startsWith('> ');
+    const content = renderInline(isQuote ? line.slice(2) : line, k);
+    if (isQuote) {
+      return (
+        <blockquote key={k} className="border-l-4 border-surface-3 pl-3 text-fg-muted">
+          {content}
+        </blockquote>
+      );
+    }
+    return (
+      <span key={k}>
+        {content}
+        {i < arr.length - 1 ? <br /> : null}
+      </span>
+    );
+  });
+}
+
+const INLINE =
+  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(~~[^~\n]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(https?:\/\/[^\s<>]+[^\s<>.,:;"')\]!?])/g;
+
+function renderInline(text: string, seed: number): ReactNode[] {
+  const out: ReactNode[] = [];
+  let last = 0;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  INLINE.lastIndex = 0;
+  while ((m = INLINE.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const k = `${seed}-${i++}`;
+    const [tok] = m;
+    if (m[1]) out.push(<code key={k} className="rounded bg-surface-0 px-1 py-0.5 text-[0.85em]">{tok.slice(1, -1)}</code>);
+    else if (m[2]) out.push(<strong key={k}>{tok.slice(2, -2)}</strong>);
+    else if (m[3]) out.push(<s key={k}>{tok.slice(2, -2)}</s>);
+    else if (m[4]) out.push(<em key={k}>{tok.slice(1, -1)}</em>);
+    else if (m[5])
+      out.push(
+        <a key={k} href={tok} target="_blank" rel="noopener noreferrer nofollow" className="text-accent hover:underline">
+          {tok}
+        </a>,
+      );
+    last = INLINE.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
