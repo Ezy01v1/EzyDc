@@ -27,6 +27,7 @@ export function toUserSelf(u: User): UserSelf {
     bannerUrl: u.bannerUrl,
     customStatus: u.customStatus,
     status: u.status,
+    totpEnabled: u.totpEnabled,
   };
 }
 

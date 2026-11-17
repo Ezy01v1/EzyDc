@@ -47,7 +47,7 @@ Los tipos exactos están en [`packages/shared/src`](../packages/shared/src). Tod
 | Fase | Rutas |
 |---|---|
 | 2 Roles ✅ | `POST/PATCH/DELETE /servers/:id/roles`, `PATCH /servers/:id/roles/positions`, `PUT/DELETE /servers/:id/members/:uid/roles/:rid`, `GET` y `PUT/DELETE /channels/:id/overwrites/:targetId` (requieren `MANAGE_ROLES`, jerarquía y no conceder bits que no tienes) |
-| 2 2FA | `POST /auth/2fa/setup`, `POST /auth/2fa/enable`, `POST /auth/2fa/disable`, `POST /auth/login/2fa` |
+| 2b 2FA ✅ | `POST /auth/2fa/setup` (`{password}` → secreto + QR SVG), `POST /auth/2fa/enable` (`{code}` → 10 códigos de respaldo), `POST /auth/2fa/disable` (`{password, code}`), `POST /auth/2fa/backup-codes` (`{code}`), `POST /auth/login/2fa` (`{ticket, code}`). Con 2FA, `POST /auth/login` responde `{ mfaRequired: true, ticket }` sin crear sesión. |
 | 3 DMs | `GET /users/me/channels`, `POST /users/me/channels` (`{ recipientIds }`), `PUT/DELETE /channels/:id/recipients/:uid`, `/users/me/relationships` |
 | 3 Notificaciones | `POST /channels/:id/ack` (`{ messageId }`), `GET /users/me/read-states`, `PUT /users/me/notification-settings/:targetId`, `POST /push/subscribe` |
 | 3 Archivos | `POST /files/presign` (`{ filename, contentType, size }` → `{ uploadUrl, fileUrl }`), reacciones `PUT/DELETE /channels/:id/messages/:mid/reactions/:emoji`, `/servers/:id/emojis`, `GET /unfurl?url=` |

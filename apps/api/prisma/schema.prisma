@@ -69,8 +69,10 @@ model User {
   customStatus String?    @map("custom_status") @db.VarChar(128)
   status       UserStatus @default(ONLINE)
   isBot        Boolean    @default(false) @map("is_bot")
-  totpSecret   String?    @map("totp_secret") // cifrado en reposo (fase 2FA)
+  totpSecret   String?    @map("totp_secret") // AES-256-GCM: "iv.tag.cipher" en base64url
   totpEnabled  Boolean    @default(false) @map("totp_enabled")
+  totpLastStep Int?       @map("totp_last_step") // anti-replay: último intervalo de 30 s aceptado
+  backupCodes  String[]   @default([]) @map("backup_codes") // sha256 de los códigos de respaldo sin usar
   createdAt    DateTime   @default(now()) @map("created_at")
 
   sessions          Session[]

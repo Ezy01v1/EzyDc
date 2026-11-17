@@ -3,7 +3,7 @@ import { ConflictException, Inject, Injectable, UnauthorizedException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { hash, verify } from '@node-rs/argon2';
 import type { LoginInput, RegisterInput, UserSelf } from '@ezydc/shared';
-import { Prisma } from '@prisma/client';
+import { Prisma, type User } from '@prisma/client';
 import { toUserSelf } from '../common/mappers';
 import { UUID_RE } from '../common/random';
 import { APP_CONFIG, type AppConfig } from '../config/config';
@@ -55,11 +55,24 @@ export class AuthService {
     }
   }
 
-  async login(input: LoginInput, meta: ClientMeta): Promise<{ user: UserSelf; tokens: Tokens }> {
+  /**
+   * Primer paso. Con 2FA activo NO crea sesión: devuelve `mfaUserId` y el controlador
+   * emite un ticket que solo se canjea junto al código (ver TwoFactorService).
+   */
+  async login(
+    input: LoginInput,
+    meta: ClientMeta,
+  ): Promise<{ user: UserSelf; tokens: Tokens } | { mfaUserId: string }> {
     const user = await this.prisma.user.findUnique({ where: { email: input.email } });
     // Si no existe, igualamos el tiempo de respuesta para no filtrar qué emails están registrados.
     const ok = user ? await verify(user.passwordHash, input.password) : (await hash(input.password, ARGON), false);
     if (!user || !ok) throw new UnauthorizedException('Email o contraseña incorrectos');
+    if (user.totpEnabled) return { mfaUserId: user.id };
+    return { user: toUserSelf(user), tokens: await this.issue(user.id, meta) };
+  }
+
+  /** Crea la sesión tras superar el segundo factor. */
+  async completeLogin(user: User, meta: ClientMeta): Promise<{ user: UserSelf; tokens: Tokens }> {
     return { user: toUserSelf(user), tokens: await this.issue(user.id, meta) };
   }
 

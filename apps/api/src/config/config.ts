@@ -32,6 +32,9 @@ const EnvSchema = z.object({
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   COOKIE_DOMAIN: optionalString,
   METRICS_TOKEN: optionalString,
+  /** 32 bytes en base64 para cifrar secretos TOTP. Si falta, se deriva de JWT_ACCESS_SECRET. */
+  TOTP_ENCRYPTION_KEY: optionalString,
+  TOTP_ISSUER: z.string().default('ezyDC'),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

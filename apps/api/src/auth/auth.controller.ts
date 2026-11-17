@@ -1,12 +1,25 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { type AuthResponse, LoginInput, RegisterInput, type UserSelf } from '@ezydc/shared';
+import {
+  type AuthResponse,
+  type BackupCodes,
+  CodeInput,
+  DisableTwoFactorInput,
+  LoginInput,
+  type LoginResponse,
+  LoginTwoFactorInput,
+  PasswordInput,
+  RegisterInput,
+  type TwoFactorSetup,
+  type UserSelf,
+} from '@ezydc/shared';
 import type { CookieOptions, Request, Response } from 'express';
 import { ZodPipe } from '../common/zod.pipe';
 import { APP_CONFIG, type AppConfig } from '../config/config';
 import { UsersService } from '../users/users.service';
 import { AuthService, type ClientMeta, type Tokens } from './auth.service';
 import { CurrentUser, Public } from './decorators';
+import { TwoFactorService } from './two-factor.service';
 
 const STRICT = { default: { limit: 10, ttl: 60_000 } }; // 10 intentos/min por IP
 
@@ -15,6 +28,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly users: UsersService,
+    private readonly twoFactor: TwoFactorService,
     @Inject(APP_CONFIG) private readonly cfg: AppConfig,
   ) {}
 
@@ -39,10 +53,56 @@ export class AuthController {
     @Body(new ZodPipe(LoginInput)) body: LoginInput,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginResponse> {
+    const result = await this.auth.login(body, meta(req));
+    if ('mfaUserId' in result) return { mfaRequired: true, ticket: this.twoFactor.issueTicket(result.mfaUserId) };
+    this.setCookies(res, result.tokens);
+    return { user: result.user };
+  }
+
+  @Public()
+  // 10 códigos/min por IP; además, cada ticket admite solo 5 intentos (TwoFactorService).
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('login/2fa')
+  async loginTwoFactor(
+    @Body(new ZodPipe(LoginTwoFactorInput)) body: LoginTwoFactorInput,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponse> {
-    const { user, tokens } = await this.auth.login(body, meta(req));
+    const user = await this.twoFactor.redeemTicket(body.ticket, body.code);
+    const { user: self, tokens } = await this.auth.completeLogin(user, meta(req));
     this.setCookies(res, tokens);
-    return { user };
+    return { user: self };
+  }
+
+  // ───────── gestión del 2FA (con sesión) ─────────
+
+  @Throttle(STRICT)
+  @Post('2fa/setup')
+  setupTwoFactor(@CurrentUser() userId: string, @Body(new ZodPipe(PasswordInput)) body: PasswordInput): Promise<TwoFactorSetup> {
+    return this.twoFactor.setup(userId, body.password);
+  }
+
+  @Throttle(STRICT)
+  @HttpCode(200)
+  @Post('2fa/enable')
+  enableTwoFactor(@CurrentUser() userId: string, @Body(new ZodPipe(CodeInput)) body: CodeInput): Promise<BackupCodes> {
+    return this.twoFactor.enable(userId, body.code);
+  }
+
+  @Throttle(STRICT)
+  @HttpCode(204)
+  @Post('2fa/disable')
+  disableTwoFactor(@CurrentUser() userId: string, @Body(new ZodPipe(DisableTwoFactorInput)) body: DisableTwoFactorInput): Promise<void> {
+    return this.twoFactor.disable(userId, body.password, body.code);
+  }
+
+  @Throttle(STRICT)
+  @HttpCode(200)
+  @Post('2fa/backup-codes')
+  regenerateBackupCodes(@CurrentUser() userId: string, @Body(new ZodPipe(CodeInput)) body: CodeInput): Promise<BackupCodes> {
+    return this.twoFactor.regenerateBackupCodes(userId, body.code);
   }
 
   @Public()

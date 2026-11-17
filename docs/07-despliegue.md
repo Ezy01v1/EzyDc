@@ -39,6 +39,7 @@ Gracias al rewrite, el navegador ve la API en el **mismo origen** que la web: la
    COOKIE_SECURE=true
    COOKIE_SAMESITE=lax
    METRICS_TOKEN=<aleatorio>
+   TOTP_ENCRYPTION_KEY=<32 bytes base64; no cambiarla nunca>
    ```
    Railway inyecta `PORT` automáticamente.
 4. *Networking → Generate Domain* → p. ej. `https://ezydc-api.up.railway.app`.

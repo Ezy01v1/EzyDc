@@ -30,7 +30,7 @@ export function refreshSession(): Promise<boolean> {
   return refreshing;
 }
 
-const NO_RETRY = new Set(['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout']);
+const NO_RETRY = new Set(['/auth/login', '/auth/login/2fa', '/auth/register', '/auth/refresh', '/auth/logout']);
 
 interface Options {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';

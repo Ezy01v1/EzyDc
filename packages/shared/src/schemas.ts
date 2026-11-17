@@ -26,6 +26,21 @@ export const LoginInput = z.object({
 });
 export type LoginInput = z.infer<typeof LoginInput>;
 
+/** Código TOTP (6 dígitos) o de respaldo ("abcde-fghij"); espacios y guiones se ignoran. */
+const secondFactor = z.string().trim().min(6).max(24);
+
+export const LoginTwoFactorInput = z.object({ ticket: z.string().min(10).max(2048), code: secondFactor });
+export type LoginTwoFactorInput = z.infer<typeof LoginTwoFactorInput>;
+
+export const PasswordInput = z.object({ password: z.string().min(1).max(128) });
+export type PasswordInput = z.infer<typeof PasswordInput>;
+
+export const CodeInput = z.object({ code: secondFactor });
+export type CodeInput = z.infer<typeof CodeInput>;
+
+export const DisableTwoFactorInput = z.object({ password: z.string().min(1).max(128), code: secondFactor });
+export type DisableTwoFactorInput = z.infer<typeof DisableTwoFactorInput>;
+
 export const UserStatusSchema = z.enum(['ONLINE', 'IDLE', 'DND', 'INVISIBLE']);
 
 export const UpdateProfileInput = z.object({

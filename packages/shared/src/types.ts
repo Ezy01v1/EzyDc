@@ -16,6 +16,7 @@ export interface UserSelf extends UserPublic {
   bannerUrl: string | null;
   customStatus: string | null;
   status: UserStatus;
+  totpEnabled: boolean;
 }
 
 export type ChannelType = 'TEXT' | 'VOICE' | 'ANNOUNCEMENT' | 'CATEGORY' | 'DM' | 'GROUP_DM' | 'THREAD';
@@ -103,6 +104,21 @@ export interface InvitePreview {
 
 export interface AuthResponse {
   user: UserSelf;
+}
+
+/** El login puede requerir un segundo paso: se canjea el ticket (5 min) con el código. */
+export type LoginResponse = AuthResponse | { mfaRequired: true; ticket: string };
+
+export interface TwoFactorSetup {
+  secret: string;
+  otpauthUrl: string;
+  /** Código QR como SVG (generado en el servidor). */
+  qrSvg: string;
+}
+
+export interface BackupCodes {
+  /** Se muestran UNA sola vez; en la BD solo se guarda su hash. */
+  codes: string[];
 }
 
 export interface Page<T> {
