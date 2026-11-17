@@ -17,6 +17,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { RolesModule } from './roles/roles.module';
 import { ServersModule } from './servers/servers.module';
 import { StorageModule } from './storage/storage.module';
+import { PushModule } from './push/push.module';
 import { EmojisModule } from './emojis/emojis.module';
 import { UsersModule } from './users/users.module';
 
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     StorageModule,
+    PushModule,
     ServersModule,
     EmojisModule,
     ChannelsModule,

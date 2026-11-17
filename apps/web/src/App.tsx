@@ -2,7 +2,10 @@ import type { UserSelf } from '@ezydc/shared';
 import { lazy, type ReactNode, Suspense, useEffect } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router';
 import { Splash } from './components/Splash';
-import { api } from './lib/api';
+import { api, ApiError } from './lib/api';
+import { lastUser, rememberUser, startOfflineCache } from './lib/offline';
+import { registerServiceWorker, syncPush } from './lib/push';
+import { queryClient } from './lib/queryClient';
 import { useAuth } from './stores/auth';
 
 // Code splitting por ruta: el login no descarga la app y viceversa.
@@ -34,14 +37,37 @@ const router = createBrowserRouter([
   { path: '*', element: <Navigate to="/channels" replace /> },
 ]);
 
+registerServiceWorker((url) => void router.navigate(url));
+
+// Al iniciar sesión (o arrancar con sesión): caché local de esta cuenta + reenganche de push.
+// (Desde el login la caché arranca aquí; al abrir la app con sesión ya viene arrancada: es idempotente.)
+let sessionFor: string | null = null;
+useAuth.subscribe((s) => {
+  rememberUser(s.user);
+  if (s.user && s.user.id !== sessionFor) {
+    sessionFor = s.user.id;
+    void startOfflineCache(queryClient, s.user.id);
+    void syncPush();
+  }
+  if (!s.user) sessionFor = null;
+});
+
 export function App() {
   const status = useAuth((s) => s.status);
   const setUser = useAuth((s) => s.setUser);
 
   useEffect(() => {
+    // Con un tope de 1 s la caché local nunca retrasa el arranque de forma apreciable.
+    const withCache = (u: UserSelf) =>
+      Promise.race([startOfflineCache(queryClient, u.id), new Promise((r) => setTimeout(r, 1000))]).then(() => setUser(u));
     api<UserSelf>('/auth/me')
-      .then(setUser)
-      .catch(() => setUser(null));
+      .then(withCache)
+      .catch((e) => {
+        // Sin red (no un 401): abrir con lo guardado de la última cuenta; el socket reconectará.
+        const cached = lastUser();
+        if (!(e instanceof ApiError) && cached) void withCache(cached);
+        else setUser(null);
+      });
   }, [setUser]);
 
   if (status === 'loading') return <Splash />;

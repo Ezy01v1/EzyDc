@@ -2,9 +2,10 @@ import { type BackupCodes, type TwoFactorSetup, UpdateProfileInput, type UserSel
 import { type FormEvent, useState } from 'react';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../stores/auth';
+import { NotificationsTab } from './NotificationsTab';
 import { SettingsShell } from './SettingsShell';
 
-type TabId = 'profile' | 'security';
+type TabId = 'profile' | 'security' | 'notifications';
 
 export default function UserSettings({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<TabId>('profile');
@@ -14,12 +15,13 @@ export default function UserSettings({ onClose }: { onClose: () => void }) {
       tabs={[
         { id: 'profile', label: 'Perfil' },
         { id: 'security', label: 'Seguridad' },
+        { id: 'notifications', label: 'Notificaciones' },
       ]}
       active={tab}
       onTab={setTab}
       onClose={onClose}
     >
-      {tab === 'profile' ? <ProfileTab /> : <SecurityTab />}
+      {tab === 'profile' ? <ProfileTab /> : tab === 'security' ? <SecurityTab /> : <NotificationsTab />}
     </SettingsShell>
   );
 }

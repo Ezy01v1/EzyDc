@@ -1,4 +1,4 @@
-import type { ChannelDto, MemberDto, MessageDto, PresenceStatus } from './types';
+import type { ChannelDto, EmbedDto, MemberDto, MessageDto, PresenceStatus } from './types';
 
 /**
  * Contrato del gateway Socket.IO.
@@ -19,6 +19,8 @@ export interface ServerToClientEvents {
   MESSAGE_REACTION_REMOVE: (p: { channelId: string; messageId: string; userId: string; emoji: string }) => void;
   /** Cambió la lista de emojis del servidor. Sala srv:*. */
   EMOJIS_UPDATE: (p: { serverId: string }) => void;
+  /** Vistas previas de enlaces listas (se generan en segundo plano). Sala ch:*. */
+  MESSAGE_EMBEDS_UPDATE: (p: { id: string; channelId: string; embeds: EmbedDto[] }) => void;
   MESSAGE_DELETE: (m: { id: string; channelId: string }) => void;
   /** Aviso mínimo para no leídos en canales a los que no estás suscrito.
    *  serverId null = DM o grupo (se envía a las salas user:* de los participantes). */

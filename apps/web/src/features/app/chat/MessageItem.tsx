@@ -11,8 +11,9 @@ import { useAuth } from '../../../stores/auth';
 import { useLive } from '../../../stores/live';
 import { type ClientMessage, patchMessage, removeMessage } from '../messageCache';
 import { Attachments } from './Attachments';
+import { Embeds } from './Embeds';
 import { useChatContext } from './chatContext';
-import { QUICK_REACTIONS } from './emojiData';
+import { QUICK_REACTIONS } from './quickReactions';
 import { AddReactionButton, ReactionBar, toggleReaction } from './Reactions';
 
 /** memo: con virtualización + memo, un mensaje nuevo solo renderiza 1 fila. */
@@ -133,6 +134,7 @@ export const MessageItem = memo(function MessageItem({
           </div>
         )}
         <Attachments items={m.attachments ?? []} />
+        <Embeds items={m.embeds ?? []} />
         {!m.pending && (
           <ReactionBar channelId={m.channelId} messageId={m.id} reactions={m.reactions ?? []} canReact={ctx.canReact} serverId={ctx.serverId} />
         )}

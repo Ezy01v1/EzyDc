@@ -16,6 +16,8 @@ import { RealtimeService, room } from '../core/realtime.service';
 import { ReadStatesService } from '../notifications/read-states.service';
 import { StorageService } from '../storage/storage.service';
 import { type PendingUpload, safeFilename, UploadsService } from '../storage/uploads.service';
+import { PreviewsService } from '../previews/previews.service';
+import { PushService } from '../push/push.service';
 import { MentionsService } from './mentions.service';
 import { ReactionsService } from './reactions.service';
 
@@ -32,6 +34,8 @@ export class MessagesService {
     private readonly reactions: ReactionsService,
     private readonly uploads: UploadsService,
     private readonly storage: StorageService,
+    private readonly previews: PreviewsService,
+    private readonly push: PushService,
   ) {}
 
   /** Paso 1 de un adjunto: URLs firmadas para subir directo a R2 (paso 2: el navegador sube; paso 3: create()). */
@@ -137,6 +141,7 @@ export class MessagesService {
     });
 
     const dto = toMessageDto(msg, input.nonce);
+    this.previews.schedule(msg.id, channelId, input.content);
     // Payload completo solo a quien está mirando el canal…
     this.realtime.emit(room.channel(channelId), 'MESSAGE_CREATE', dto);
     // …y un aviso de pocos bytes al resto que PUEDA verlo (no leídos).
@@ -154,8 +159,41 @@ export class MessagesService {
         channelId,
         messageId: msg.id,
       });
+      if (this.push.enabled) void this.sendPush(dto, meta.serverId, mentions.notify);
     }
     return dto;
+  }
+
+  /** Texto legible para la notificación: menciones con nombre, emojis como :nombre:, sin markdown. */
+  private async sendPush(m: MessageDto, serverId: string | null, userIds: string[]): Promise<void> {
+    const ch = await this.prisma.channel.findUnique({
+      where: { id: m.channelId },
+      select: { name: true, type: true, server: { select: { name: true } } },
+    });
+    const author = m.author?.displayName ?? m.author?.username ?? 'Alguien';
+    let body = m.content
+      .replace(/<@([0-9a-f-]{36})>/g, (_, id: string) => {
+        const u = m.mentions.find((x) => x.id === id);
+        return `@${u?.displayName ?? u?.username ?? 'usuario'}`;
+      })
+      .replace(/<@&[0-9a-f-]{36}>/g, '@rol')
+      .replace(/<a?:(\w+):[0-9a-f-]{36}>/g, ':$1:')
+      .replace(/[*_~`>]/g, '')
+      .trim();
+    if (!body) body = m.attachments.length ? `📎 ${m.attachments.length > 1 ? `${m.attachments.length} archivos` : m.attachments[0]!.filename}` : '';
+    if (body.length > 140) body = `${body.slice(0, 139)}…`;
+    const title = serverId
+      ? `${author} en #${ch?.name ?? 'canal'}${ch?.server ? ` · ${ch.server.name}` : ''}`
+      : ch?.type === 'GROUP_DM'
+        ? `${author} en ${ch.name ?? 'un grupo'}`
+        : author;
+    this.push.notify(userIds, { channelId: m.channelId, serverId }, {
+      title,
+      body,
+      url: `/channels/${serverId ?? '@me'}/${m.channelId}`,
+      tag: m.channelId,
+      icon: m.author?.avatarUrl ?? undefined,
+    });
   }
 
   async update(channelId: string, messageId: string, userId: string, input: UpdateMessageInput): Promise<MessageDto> {
@@ -163,7 +201,7 @@ export class MessagesService {
     if (!hasPermission(perms, Permission.VIEW_CHANNEL)) throw new NotFoundException('Canal no encontrado');
     const existing = await this.prisma.message.findFirst({
       where: { id: messageId, channelId },
-      select: { authorId: true },
+      select: { authorId: true, embeds: true },
     });
     if (!existing) throw new NotFoundException('Mensaje no encontrado');
     if (existing.authorId !== userId) throw new ForbiddenException('Solo puedes editar tus mensajes');
@@ -183,6 +221,7 @@ export class MessagesService {
     });
     // Sin "reactions": `me` depende de quién lo recibe; el cliente conserva las suyas.
     const { reactions: _omit, ...update } = toMessageDto(m);
+    this.previews.schedule(m.id, channelId, input.content, update.embeds);
     this.realtime.emit(room.channel(channelId), 'MESSAGE_UPDATE', update);
     const own = await this.reactions.forMessages([m.id], userId);
     return { ...update, reactions: own.get(m.id) ?? [] };

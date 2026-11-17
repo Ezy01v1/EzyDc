@@ -18,13 +18,13 @@ Cada fase se puede desplegar sola. El esquema de BD ya contempla todas, así que
 - DMs y grupos (`channels.type = DM | GROUP_DM` + `dm_participants`), amigos y bloqueos.
 - No leídos persistentes: `read_states` + `channels.last_message_id`; `POST /channels/:id/ack` con *debounce*; contadores por canal y servidor.
 - Menciones `@usuario`, `@rol`, `@everyone` (parseo en servidor, `message_*_mentions`, `mention_count`).
-- Web Push (VAPID, `web-push`) solo si el usuario no tiene sockets activos; silenciar canales/servidores.
+- Web Push ✅ (3c): VAPID con `web-push` 3.x, solo a quien no tiene sockets activos, respeta silencios; `POST|DELETE /users/me/push-subscriptions`.
 - Archivos ✅ (3b): `POST /channels/:id/attachments` → URLs firmadas → PUT directo a R2 (Content-Type y Content-Length firmados) → `POST /messages` con `uploadId` (vale de un solo uso, verificado con HEAD). Imágenes medidas y pasadas a WebP en el navegador.
 - Reacciones ✅ (3b): `PUT|DELETE /channels/:id/messages/:mid/reactions/:emoji/@me`; emojis personalizados `servers/:id/emojis` (imagen en `emojis/<id>` del CDN).
 - Reacciones y emojis personalizados; picker de emojis con `import()` perezoso.
-- Previews de enlaces (unfurl en servidor con timeout, caché Redis 24 h, bloqueo de IPs privadas contra SSRF).
+- Previews de enlaces ✅ (3c): unfurl en segundo plano (evento `MESSAGE_EMBEDS_UPDATE`), `safe-fetch` con IP validada en el `lookup` del socket, caché 6 h.
 - Resaltado de código perezoso (`shiki` con `import()` solo si hay bloques).
-- **PWA:** `vite-plugin-pwa` (service worker, instalable) + caché de los últimos 50 mensajes por canal en IndexedDB (`idb-keyval`) para arranque instantáneo/offline.
+- **PWA ✅ (3c):** service worker propio en `public/sw.js` (sin `vite-plugin-pwa`: ~3 KB) + caché en IndexedDB por usuario (últimos 50 mensajes de 30 canales) usada como `placeholderData`.
 
 ## Fase 4 — Voz y vídeo (1–2 semanas)
 - `POST /voice/:channelId/token`: el backend firma un `AccessToken` de LiveKit con permisos derivados del bitfield (`CONNECT` → join, `SPEAK` → publish audio, `STREAM` → pantalla).

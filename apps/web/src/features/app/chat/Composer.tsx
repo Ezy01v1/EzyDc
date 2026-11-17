@@ -220,6 +220,7 @@ export function Composer({ channel, placeholderName, disabled }: { channel: Chan
         height: f.height ?? null,
       })),
       reactions: [],
+      embeds: [],
       nonce,
       pending: true,
     };

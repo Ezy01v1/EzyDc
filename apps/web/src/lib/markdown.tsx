@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { customEmojiUrl } from './emoji';
 
 /**
@@ -6,7 +6,7 @@ import { customEmojiUrl } from './emoji';
  * Soporta: ```bloques```, `código`, **negrita**, *cursiva* / _cursiva_, ~~tachado~~,
  * > citas y enlaces http(s) (otros esquemas como javascript: nunca se convierten en enlace).
  * Menciones <@id>, <@&id> y @everyone como "pastillas" (nombre resuelto vía MentionRender).
- * Resaltado de sintaxis: Fase 3c, cargado con import() solo si hay bloques de código.
+ * Resaltado de sintaxis: highlight.js cargado con import() solo cuando se pinta un bloque ```.
  */
 
 /** Cómo pintar menciones (<@id>, <@&id>, @everyone). */
@@ -27,9 +27,7 @@ export function renderMarkdown(src: string, mentions?: MentionRender): ReactNode
   while ((m = fence.exec(src))) {
     if (m.index > last) out.push(...renderLines(src.slice(last, m.index), () => key++));
     out.push(
-      <pre key={`pre${key++}`} className="my-1 overflow-x-auto rounded-md bg-surface-0 p-3 text-[0.85em] leading-relaxed">
-        <code data-lang={m[1] || undefined}>{m[2]?.replace(/\n$/, '')}</code>
-      </pre>,
+      <CodeBlock key={`pre${key++}`} lang={m[1] || undefined} code={m[2]?.replace(/\n$/, '') ?? ''} />,
     );
     last = fence.lastIndex;
   }
@@ -115,5 +113,28 @@ function mentionPill(tok: string, key: string): ReactNode {
     <span key={key} className={`${cls} bg-accent/25 text-accent`}>
       @{mentionCtx?.user(id) ?? 'usuario-desconocido'}
     </span>
+  );
+}
+
+type Highlighter = typeof import('./highlight');
+let hl: Promise<Highlighter> | null = null;
+
+/** Bloque de código: se pinta plano al instante y se colorea cuando llega el chunk de highlight.js. */
+function CodeBlock({ code, lang }: { code: string; lang?: string }) {
+  const [html, setHtml] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (hl ??= import('./highlight'))
+      .then((m) => alive && setHtml(m.highlight(code, lang?.toLowerCase())))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [code, lang]);
+  return (
+    <pre className="hljs my-1 overflow-x-auto rounded-md bg-surface-0 p-3 text-[0.85em] leading-relaxed" data-lang={lang}>
+      {/* highlight.js escapa el código: el HTML resultante solo contiene <span class="hljs-*">. */}
+      {html !== null ? <code dangerouslySetInnerHTML={{ __html: html }} /> : <code>{code}</code>}
+    </pre>
   );
 }

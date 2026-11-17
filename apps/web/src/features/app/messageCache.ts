@@ -1,6 +1,7 @@
 import type { MessageDto } from '@ezydc/shared';
 import { type InfiniteData, type QueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { seededMessages } from '../../lib/offline';
 import { qk } from '../../lib/queryClient';
 
 export const PAGE_SIZE = 50;
@@ -21,6 +22,11 @@ export function useMessages(channelId: string) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => (last.length === PAGE_SIZE ? last[0]?.id : undefined),
     staleTime: Infinity, // el socket y la sincronización incremental lo mantienen al día
+    // Lo último guardado en IndexedDB se ve al instante (y sin red) mientras llega la versión real.
+    placeholderData: () => {
+      const seed = seededMessages(channelId) as ClientMessage[] | undefined;
+      return seed?.length ? { pages: [seed], pageParams: [undefined] } : undefined;
+    },
     gcTime: 5 * 60_000,
   });
 }

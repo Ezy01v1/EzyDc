@@ -132,5 +132,3 @@ export const EMOJI_CATEGORIES: readonly { id: string; label: string; icon: strin
   },
 ];
 
-/** Atajos rápidos para reaccionar con un clic. */
-export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉'] as const;

@@ -93,7 +93,19 @@ export interface MessageDto {
   attachments: AttachmentDto[];
   /** Agrupadas por emoji, en orden de primera reacción. `me` depende de quién pide. */
   reactions: ReactionDto[];
+  /** Vistas previas de enlaces (llegan después, con MESSAGE_EMBEDS_UPDATE). */
+  embeds: EmbedDto[];
   nonce?: string;
+}
+
+export interface EmbedDto {
+  url: string;
+  title: string | null;
+  description: string | null;
+  siteName: string | null;
+  image: string | null;
+  /** Color del sitio (meta theme-color), "#rrggbb". */
+  color: string | null;
 }
 
 export interface AttachmentDto {
@@ -135,6 +147,8 @@ export interface PublicConfig {
   /** Base pública de R2 (null si los archivos no están configurados). */
   cdnUrl: string | null;
   maxUploadBytes: number;
+  /** Clave pública VAPID para Web Push (null si no está configurado). */
+  vapidPublicKey: string | null;
 }
 
 /** DM 1:1 o grupo privado. `recipients` excluye al propio usuario. */

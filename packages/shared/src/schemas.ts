@@ -249,3 +249,14 @@ export const ReactionEmoji = z
 
 /** Emoji personalizado en el texto: <:nombre:id> (o <a:nombre:id> animado). */
 export const CUSTOM_EMOJI_RE = /<(a?):(\w{2,32}):([0-9a-f-]{36})>/g;
+
+// ───────── Fase 3c: Web Push ─────────
+
+export const PushSubscriptionInput = z.object({
+  endpoint: z.string().url().max(1000).startsWith('https://'),
+  keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+});
+export type PushSubscriptionInput = z.infer<typeof PushSubscriptionInput>;
+
+export const PushUnsubscribeInput = z.object({ endpoint: z.string().url().max(1000) });
+export type PushUnsubscribeInput = z.infer<typeof PushUnsubscribeInput>;

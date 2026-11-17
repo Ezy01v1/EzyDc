@@ -1,4 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
+import { clearOfflineCache } from '../../lib/offline';
+import { dropPushOnLogout } from '../../lib/push';
 import { useNavigate } from 'react-router';
 import { Avatar } from '../../components/Avatar';
 import { api } from '../../lib/api';
@@ -19,7 +21,10 @@ export function UserPanel() {
   const [settings, setSettings] = useState(false);
 
   async function logout() {
+    const id = user?.id;
+    await dropPushOnLogout(); // antes de cerrar la sesión: la API aún nos reconoce
     await api('/auth/logout', { method: 'POST' }).catch(() => {});
+    if (id) await clearOfflineCache(id);
     disconnectSocket();
     queryClient.clear();
     setUser(null);

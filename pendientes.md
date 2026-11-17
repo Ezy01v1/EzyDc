@@ -1,6 +1,6 @@
 # Pendientes de ezyDC
 
-Estado al 16/11/2026: **Fases 1, 2, 2b, 3a y 3b completas y probadas** contra Neon (REST, tiempo real, UI).
+Estado al 16/11/2026: **Fases 1, 2, 2b, 3a, 3b y 3c completas y probadas** contra Neon (REST, tiempo real, UI).
 Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 
 ## Urgente / housekeeping
@@ -55,12 +55,20 @@ Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 - [ ] Ver quién reaccionó (lista de usuarios por emoji).
 - [ ] Comprobar USE_EXTERNAL_EMOJIS también en el TEXTO del mensaje (hoy solo en reacciones).
 
-## Fase 3c — Push, PWA y extras
-- [ ] Web Push (claves VAPID) para menciones con la app cerrada.
-- [ ] PWA: service worker, caché de mensajes en IndexedDB, instalable.
-- [ ] Previews de enlaces (con protección SSRF).
-- [ ] Resaltado de código perezoso.
-- [ ] Hilos.
+## Fase 3c — Push, PWA y extras ✅
+- [x] Previews de enlaces en segundo plano con protección SSRF (IP validada en el propio socket contra DNS rebinding, bloqueo de redes privadas/metadatos cloud, solo puertos 80/443, redirecciones revalidadas, 4 s y 512 KB máx., caché 6 h).
+- [x] Resaltado de código con highlight.js en chunk aparte (29 KB gzip, solo si hay bloques ```), 17 lenguajes.
+- [x] Web Push (VAPID): menciones y DMs a quien no tiene ninguna pestaña abierta; respeta silencios; limpia suscripciones caducadas (404/410). Pestaña "Notificaciones" en ajustes.
+- [x] PWA: manifest, iconos, service worker propio (~3 KB, sin Workbox): cascarón offline, assets cache-first.
+- [x] Caché en IndexedDB por usuario (servidores, DMs, no leídos, últimos 50 mensajes de 30 canales): la app abre al instante y sin red; se borra al cerrar sesión.
+- [ ] **Probar push y service worker en Chrome/Edge real**: el navegador integrado de Claude no admite service workers, así que el registro del SW y la notificación visible no se han podido ver (el envío desde la API sí está probado).
+- [ ] Redirección a IP interna: revisado en código (cada salto pasa la misma validación) pero no reproducido de punta a punta (los redirectores públicos se niegan).
+- [ ] Las imágenes de las previews se cargan desde el sitio original (revela la IP del lector a ese sitio). Opción: proxy de imágenes propio o vía Cloudflare.
+- [ ] Notificación de "nuevo mensaje" en iOS: requiere instalar la PWA en inicio (limitación de Safari).
+- [ ] La caché de rate limit y de previews está en memoria si no hay Redis: en producción usar Upstash.
+
+## Fase 3d — Hilos
+- [ ] Hilos a partir de un mensaje (tipo de canal THREAD ya previsto en el esquema), panel lateral, archivado automático.
 
 ## Fase 4 — Voz y vídeo (LiveKit Cloud)
 - [ ] Token firmado en el backend según permisos.

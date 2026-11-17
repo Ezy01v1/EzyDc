@@ -42,6 +42,10 @@ const EnvSchema = z.object({
   R2_BUCKET: optionalString,
   /** URL pública del bucket (r2.dev o dominio propio), sin "/" final. */
   R2_PUBLIC_URL: optionalString,
+  /** Web Push. Generar con: npx web-push generate-vapid-keys */
+  VAPID_PUBLIC_KEY: optionalString,
+  VAPID_PRIVATE_KEY: optionalString,
+  VAPID_SUBJECT: z.string().default('mailto:admin@example.com'),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

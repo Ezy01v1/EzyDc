@@ -87,6 +87,16 @@ Bucket + token S3 con permiso de escritura solo sobre ese bucket. CORS del bucke
 ```
  Variables `R2_*` en el backend; dominio público (o `r2.dev`) en `R2_PUBLIC_URL`.
 
+## 6b. Notificaciones push — VAPID (Fase 3c)
+
+Genera las claves UNA vez y guárdalas (si cambian, todas las suscripciones dejan de valer):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+En el backend: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT=mailto:tu-correo`. El frontend obtiene la clave pública de `GET /api/config`. Push y el service worker exigen **HTTPS** (en local, `localhost` vale).
+
 ## 7. Verificación tras desplegar
 
 ```bash

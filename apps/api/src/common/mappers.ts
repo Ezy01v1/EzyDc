@@ -1,4 +1,4 @@
-import type { ChannelDto, MessageDto, ReactionDto, RoleDto, ServerSummary, UserPublic, UserSelf } from '@ezydc/shared';
+import type { ChannelDto, EmbedDto, MessageDto, ReactionDto, RoleDto, ServerSummary, UserPublic, UserSelf } from '@ezydc/shared';
 import type { Channel, Prisma, Role, Server, User } from '@prisma/client';
 
 /** Selects mínimos: nunca traer columnas que no se envían (passwordHash, totpSecret...). */
@@ -88,6 +88,7 @@ export function toMessageDto(m: MessageRow, nonce?: string, reactions: ReactionD
     mentionEveryone: m.mentionEveryone,
     attachments: m.attachments,
     reactions,
+    embeds: Array.isArray(m.embeds) ? (m.embeds as unknown as EmbedDto[]) : [],
     ...(nonce ? { nonce } : {}),
   };
 }

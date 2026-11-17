@@ -32,6 +32,7 @@ const SERVER_EVENTS = [
   'MESSAGE_REACTION_ADD',
   'MESSAGE_REACTION_REMOVE',
   'EMOJIS_UPDATE',
+  'MESSAGE_EMBEDS_UPDATE',
 ] as const satisfies readonly (keyof ServerToClientEvents)[];
 
 /** Conecta el socket y traduce eventos a la caché de TanStack Query / stores. */
@@ -84,6 +85,7 @@ export function useRealtime(): void {
     });
     s.on('MESSAGE_UPDATE', (m) => patchMessage(qc, m.channelId, m.id, m));
     s.on('MESSAGE_DELETE', (m) => removeMessage(qc, m.channelId, m.id));
+    s.on('MESSAGE_EMBEDS_UPDATE', (p) => patchMessage(qc, p.channelId, p.id, { embeds: p.embeds }));
     s.on('MESSAGE_REACTION_ADD', (p) =>
       applyReaction(qc, p.channelId, p.messageId, p.emoji, true, p.userId === useAuth.getState().user?.id, { url: p.url, name: p.name }),
     );
