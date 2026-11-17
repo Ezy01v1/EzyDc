@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queryClient';
 import { useAuth } from '../../stores/auth';
+import { isMuted, isUnread as isUnread_, mentionCount, toggleMute, useReadIndex } from '../../lib/unread';
 import { useLive } from '../../stores/live';
 import { CreateChannelModal } from './modals/CreateChannelModal';
 import { InviteModal } from './modals/InviteModal';
@@ -39,7 +40,8 @@ export function ChannelSidebar({
   const qc = useQueryClient();
   const navigate = useNavigate();
   const me = useAuth((s) => s.user?.id);
-  const unread = useLive((s) => s.unread);
+  const idx = useReadIndex();
+  const serverMuted = isMuted(idx, server.id);
   const [creatingIn, setCreatingIn] = useState<string | null | undefined>(undefined);
   const [inviting, setInviting] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -117,6 +119,9 @@ export function ChannelSidebar({
             )}
             {canRoles && <MenuItem onClick={() => (setMenu(false), setServerSettings(true))}>Ajustes del servidor</MenuItem>}
             {canManage && <MenuItem onClick={() => (setMenu(false), setCreatingIn(null))}>Crear canal</MenuItem>}
+            <MenuItem onClick={() => (setMenu(false), void toggleMute(server.id, !serverMuted))}>
+              {serverMuted ? 'Dejar de silenciar' : 'Silenciar servidor'}
+            </MenuItem>
             <MenuItem onClick={leaveOrDelete} className="text-danger">
               {isOwner ? 'Eliminar servidor' : 'Abandonar servidor'}
             </MenuItem>
@@ -143,7 +148,9 @@ export function ChannelSidebar({
             )}
             {g.channels.map((c) => {
               const active = c.id === activeChannelId;
-              const isUnread = !!unread[c.id] && !active;
+              const muted = serverMuted || isMuted(idx, c.id);
+              const isUnread = !active && !muted && isUnread_(idx, c.id, c.lastMessageId);
+              const mentions = active ? 0 : mentionCount(idx, c.id);
               return (
                 <Link
                   key={c.id}
@@ -159,13 +166,18 @@ export function ChannelSidebar({
                       : isUnread
                         ? 'font-semibold text-fg hover:bg-surface-3/60'
                         : 'text-fg-subtle hover:bg-surface-3/60 hover:text-fg-muted'
-                  } ${dragId === c.id ? 'opacity-40' : ''}`}
+                  } ${muted && !active ? 'opacity-50' : ''} ${dragId === c.id ? 'opacity-40' : ''}`}
                 >
                   {isUnread && <span className="absolute -left-2 h-2 w-1 rounded-r bg-fg" />}
                   <span aria-hidden className="w-5 text-center text-fg-subtle">
                     {c.type === 'VOICE' ? '🔊' : c.type === 'ANNOUNCEMENT' ? '📢' : '#'}
                   </span>
                   <span className="flex-1 truncate">{c.name}</span>
+                  {mentions > 0 && (
+                    <span className="grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[0.65rem] font-bold text-white">
+                      {mentions > 99 ? '99+' : mentions}
+                    </span>
+                  )}
                   {canEditChannel(c.id) && (
                     <button
                       title="Editar canal"

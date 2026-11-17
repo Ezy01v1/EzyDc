@@ -12,6 +12,8 @@ export const userPublicSelect = {
 export const messageInclude = {
   author: { select: userPublicSelect },
   replyTo: { select: { id: true, content: true, author: { select: userPublicSelect } } },
+  userMentions: { select: { user: { select: userPublicSelect } } },
+  roleMentions: { select: { roleId: true } },
 } satisfies Prisma.MessageInclude;
 
 type MessageRow = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
@@ -77,6 +79,9 @@ export function toMessageDto(m: MessageRow, nonce?: string): MessageDto {
     replyTo: m.replyTo
       ? { id: m.replyTo.id, author: m.replyTo.author, content: m.replyTo.content.slice(0, 200) }
       : null,
+    mentions: m.userMentions.map((x) => x.user),
+    mentionRoleIds: m.roleMentions.map((x) => x.roleId),
+    mentionEveryone: m.mentionEveryone,
     ...(nonce ? { nonce } : {}),
   };
 }

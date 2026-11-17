@@ -4,9 +4,20 @@ import type { ReactNode } from 'react';
  * Markdown mínimo y SEGURO: genera nodos React (texto escapado por React), nunca innerHTML.
  * Soporta: ```bloques```, `código`, **negrita**, *cursiva* / _cursiva_, ~~tachado~~,
  * > citas y enlaces http(s) (otros esquemas como javascript: nunca se convierten en enlace).
- * Resaltado de sintaxis: Fase 3, cargado con import() solo si hay bloques de código.
+ * Menciones <@id>, <@&id> y @everyone como "pastillas" (nombre resuelto vía MentionRender).
+ * Resaltado de sintaxis: Fase 3c, cargado con import() solo si hay bloques de código.
  */
-export function renderMarkdown(src: string): ReactNode[] {
+
+/** Cómo pintar menciones (<@id>, <@&id>, @everyone). */
+export interface MentionRender {
+  user: (id: string) => string | undefined;
+  role: (id: string) => { name: string; color?: string } | undefined;
+}
+
+let mentionCtx: MentionRender | undefined;
+
+export function renderMarkdown(src: string, mentions?: MentionRender): ReactNode[] {
+  mentionCtx = mentions;
   const out: ReactNode[] = [];
   const fence = /```([\w+-]*)\n?([\s\S]*?)```/g;
   let last = 0;
@@ -47,7 +58,7 @@ function renderLines(text: string, nextKey: () => number): ReactNode[] {
 }
 
 const INLINE =
-  /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(~~[^~\n]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(https?:\/\/[^\s<>]+[^\s<>.,:;"')\]!?])/g;
+  /(<@&?[0-9a-f-]{36}>|@everyone(?!\w))|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(~~[^~\n]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(https?:\/\/[^\s<>]+[^\s<>.,:;"')\]!?])/g;
 
 function renderInline(text: string, seed: number): ReactNode[] {
   const out: ReactNode[] = [];
@@ -59,11 +70,12 @@ function renderInline(text: string, seed: number): ReactNode[] {
     if (m.index > last) out.push(text.slice(last, m.index));
     const k = `${seed}-${i++}`;
     const [tok] = m;
-    if (m[1]) out.push(<code key={k} className="rounded bg-surface-0 px-1 py-0.5 text-[0.85em]">{tok.slice(1, -1)}</code>);
-    else if (m[2]) out.push(<strong key={k}>{tok.slice(2, -2)}</strong>);
-    else if (m[3]) out.push(<s key={k}>{tok.slice(2, -2)}</s>);
-    else if (m[4]) out.push(<em key={k}>{tok.slice(1, -1)}</em>);
-    else if (m[5])
+    if (m[1]) out.push(mentionPill(tok, k));
+    else if (m[2]) out.push(<code key={k} className="rounded bg-surface-0 px-1 py-0.5 text-[0.85em]">{tok.slice(1, -1)}</code>);
+    else if (m[3]) out.push(<strong key={k}>{tok.slice(2, -2)}</strong>);
+    else if (m[4]) out.push(<s key={k}>{tok.slice(2, -2)}</s>);
+    else if (m[5]) out.push(<em key={k}>{tok.slice(1, -1)}</em>);
+    else if (m[6])
       out.push(
         <a key={k} href={tok} target="_blank" rel="noopener noreferrer nofollow" className="text-accent hover:underline">
           {tok}
@@ -73,4 +85,25 @@ function renderInline(text: string, seed: number): ReactNode[] {
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
+}
+
+function mentionPill(tok: string, key: string): ReactNode {
+  const cls = 'rounded px-0.5 font-medium';
+  if (tok.startsWith('@everyone')) {
+    return <span key={key} className={`${cls} bg-accent/25 text-accent`}>@everyone</span>;
+  }
+  const id = tok.replace(/[<>@&]/g, '');
+  if (tok.startsWith('<@&')) {
+    const r = mentionCtx?.role(id);
+    return (
+      <span key={key} className={`${cls} bg-accent/25 text-accent`} style={r?.color ? { color: r.color, background: `${r.color}33` } : undefined}>
+        @{r?.name ?? 'rol-eliminado'}
+      </span>
+    );
+  }
+  return (
+    <span key={key} className={`${cls} bg-accent/25 text-accent`}>
+      @{mentionCtx?.user(id) ?? 'usuario-desconocido'}
+    </span>
+  );
 }

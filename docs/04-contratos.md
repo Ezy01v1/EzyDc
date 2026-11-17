@@ -48,8 +48,8 @@ Los tipos exactos están en [`packages/shared/src`](../packages/shared/src). Tod
 |---|---|
 | 2 Roles ✅ | `POST/PATCH/DELETE /servers/:id/roles`, `PATCH /servers/:id/roles/positions`, `PUT/DELETE /servers/:id/members/:uid/roles/:rid`, `GET` y `PUT/DELETE /channels/:id/overwrites/:targetId` (requieren `MANAGE_ROLES`, jerarquía y no conceder bits que no tienes) |
 | 2b 2FA ✅ | `POST /auth/2fa/setup` (`{password}` → secreto + QR SVG), `POST /auth/2fa/enable` (`{code}` → 10 códigos de respaldo), `POST /auth/2fa/disable` (`{password, code}`), `POST /auth/2fa/backup-codes` (`{code}`), `POST /auth/login/2fa` (`{ticket, code}`). Con 2FA, `POST /auth/login` responde `{ mfaRequired: true, ticket }` sin crear sesión. |
-| 3 DMs | `GET /users/me/channels`, `POST /users/me/channels` (`{ recipientIds }`), `PUT/DELETE /channels/:id/recipients/:uid`, `/users/me/relationships` |
-| 3 Notificaciones | `POST /channels/:id/ack` (`{ messageId }`), `GET /users/me/read-states`, `PUT /users/me/notification-settings/:targetId`, `POST /push/subscribe` |
+| 3a DMs ✅ | `GET/POST /users/me/channels` (`{ recipientIds, name? }` → reutiliza el DM 1:1 si existe), `GET /users/me/contacts`, `PUT /channels/:id/recipients/:uid`, `DELETE /channels/:id/recipients/@me` (cerrar DM / salir del grupo). Pendiente: `/users/me/relationships`. |
+| 3a No leídos ✅ | `POST /channels/:id/ack` (`{ messageId }`, nunca retrocede), `GET /users/me/read-states`, `PUT /users/me/notification-settings/:targetId` (`{ muted?, level? }`). `GET /servers` incluye `unread` y `mentions`. Menciones en el contenido: `<@userId>`, `<@&roleId>`, `@everyone`. Pendiente (3c): `POST /push/subscribe`. |
 | 3 Archivos | `POST /files/presign` (`{ filename, contentType, size }` → `{ uploadUrl, fileUrl }`), reacciones `PUT/DELETE /channels/:id/messages/:mid/reactions/:emoji`, `/servers/:id/emojis`, `GET /unfurl?url=` |
 | 4 Voz | `POST /voice/:channelId/token` → `{ url, token }` (LiveKit, firmado con `CONNECT`/`SPEAK`/`STREAM`) |
 | 5 Moderación | `PUT/DELETE /servers/:id/bans/:uid`, `DELETE /servers/:id/members/:uid` (kick), `PATCH …/members/:uid` (`timeoutUntil`), `GET /servers/:id/audit-log`, `/servers/:id/word-filters` |
@@ -94,6 +94,11 @@ Conexión: `io(WS_URL, { transports: ['websocket'], auth: { token } })` con el t
 | `PRESENCE_UPDATE` | `srv:` | `{ userId, status }` |
 | `ROLES_UPDATE` | `srv:` | `{ serverId }` — roles u overrides cambiaron: recargar detalle (sin filtrar datos de canales privados) |
 | `MEMBER_UPDATE` | `srv:` | `{ serverId, userId, roleIds }` |
+| `MENTION_CREATE` | `user:` | `{ serverId \| null, channelId, messageId }` — +1 al contador (todo mensaje de DM cuenta) |
+| `CHANNEL_ACK` | `user:` | `{ channelId, messageId }` — sincroniza la lectura entre pestañas/dispositivos |
+| `DM_CHANNELS_UPDATE` | `user:` | `{ channelId }` — recargar la lista de DMs |
+
+`CHANNEL_ACTIVITY` de un DM va a las salas `user:` de los participantes con `serverId: null`. `MESSAGE_UPDATE` envía el `MessageDto` completo (las menciones pueden cambiar al editar).
 
 `CHANNEL_ACTIVITY`, `CHANNEL_UPDATE` y `CHANNEL_DELETE` solo se envían a los sockets que pueden ver el canal (difusión directa si el canal es público).
 

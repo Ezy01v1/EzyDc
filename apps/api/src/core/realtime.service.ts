@@ -17,10 +17,12 @@ export class RealtimeService {
   server: Server | null = null;
 
   emit<E extends keyof ServerToClientEvents>(
-    target: string,
+    target: string | string[],
     event: E,
     payload: Parameters<ServerToClientEvents[E]>[0],
   ): void {
+    // ¡Cuidado! io.to([]) emitiría a TODOS los sockets: una lista vacía no envía nada.
+    if (Array.isArray(target) && target.length === 0) return;
     this.server?.to(target).emit(event, payload);
   }
 

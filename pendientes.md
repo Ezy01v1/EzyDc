@@ -1,6 +1,6 @@
 # Pendientes de ezyDC
 
-Estado al 16/11/2026: **Fases 1, 2 y 2b completas y probadas** contra Neon (REST, tiempo real, UI).
+Estado al 16/11/2026: **Fases 1, 2, 2b y 3a completas y probadas** contra Neon (REST, tiempo real, UI).
 Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 
 ## Urgente / housekeeping
@@ -32,16 +32,25 @@ Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 - [ ] Sincronizar permisos de un canal con su categoría (botón "sincronizar").
 - [ ] `emitToChannelViewers` recorre los sockets del servidor en canales privados: en servidores muy grandes, cachear la lista de usuarios con acceso.
 
-## Fase 3 — DMs, notificaciones y archivos
-- [ ] Mensajes directos y grupos privados; amigos y bloqueos.
-- [ ] No leídos persistentes (`read_states`), contadores por canal y servidor, silenciar.
-- [ ] Menciones @usuario / @rol / @everyone.
-- [ ] Web Push.
-- [ ] Subida de archivos por URL firmada (R2), imágenes WebP/AVIF.
+## Fase 3a — DMs, no leídos y menciones ✅
+- [x] Mensajes directos y grupos privados (hasta 10), abrir DM desde la lista de miembros, cerrar/salir, herencia de dueño.
+- [x] No leídos persistentes (`read_states`), contadores de menciones por canal, servidor y DMs, línea "NUEVOS", título "(n) ezyDC".
+- [x] Menciones @usuario / @rol / @everyone con autocompletado y validación de permisos; responder notifica al autor.
+- [x] Silenciar canales y servidores.
+- [ ] Amigos y bloqueos (tabla `relationships` lista; hoy los DMs exigen compartir servidor).
+- [ ] Renombrar grupos y añadir personas desde la UI (la API `PUT /channels/:id/recipients/:userId` ya existe).
+- [ ] Nivel de notificación "solo menciones / nada" por servidor en la UI (la API ya lo admite).
+- [ ] Bandeja "Menciones recientes" (índice `message_user_mentions(user_id, message_id)` ya creado).
+
+## Fase 3b — Archivos, reacciones y emojis
+- [ ] Subida de archivos por URL firmada (R2), imágenes WebP/AVIF. **Necesita crear un bucket R2.**
 - [ ] Reacciones, emojis personalizados, picker con carga perezosa.
+
+## Fase 3c — Push, PWA y extras
+- [ ] Web Push (claves VAPID) para menciones con la app cerrada.
+- [ ] PWA: service worker, caché de mensajes en IndexedDB, instalable.
 - [ ] Previews de enlaces (con protección SSRF).
 - [ ] Resaltado de código perezoso.
-- [ ] PWA: service worker, IndexedDB, instalable.
 - [ ] Hilos.
 
 ## Fase 4 — Voz y vídeo (LiveKit Cloud)

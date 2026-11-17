@@ -85,7 +85,44 @@ export interface MessageDto {
   createdAt: string;
   editedAt: string | null;
   replyTo: { id: string; author: UserPublic | null; content: string } | null;
+  /** Usuarios mencionados con <@id> (para pintar "@nombre"). */
+  mentions: UserPublic[];
+  /** Roles mencionados con <@&id>. */
+  mentionRoleIds: string[];
+  mentionEveryone: boolean;
   nonce?: string;
+}
+
+/** DM 1:1 o grupo privado. `recipients` excluye al propio usuario. */
+export interface DmChannelDto extends ChannelDto {
+  ownerId: string | null;
+  recipients: UserPublic[];
+}
+
+export interface ReadStateDto {
+  channelId: string;
+  lastReadMessageId: string | null;
+  mentionCount: number;
+}
+
+export type NotificationLevel = 'ALL' | 'MENTIONS' | 'NONE';
+
+export interface NotificationSettingDto {
+  /** Id de servidor o de canal. */
+  targetId: string;
+  muted: boolean;
+  level: NotificationLevel;
+}
+
+export interface ReadStatesResponse {
+  readStates: ReadStateDto[];
+  settings: NotificationSettingDto[];
+}
+
+/** Servidor en la barra lateral, con su estado de no leídos ya calculado. */
+export interface ServerListItem extends ServerSummary {
+  unread: boolean;
+  mentions: number;
 }
 
 export interface InviteDto {

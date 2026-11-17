@@ -5,9 +5,12 @@ import { Virtuoso } from 'react-virtuoso';
 import { Avatar } from '../../components/Avatar';
 import { api } from '../../lib/api';
 import { displayName } from '../../lib/format';
-import { qk } from '../../lib/queryClient';
+import { queryClient, qk } from '../../lib/queryClient';
 import { byPositionDesc, hoistedRole, memberColor } from '../../lib/roles';
+import { useNavigate } from 'react-router';
+import { useAuth } from '../../stores/auth';
 import { useLive } from '../../stores/live';
+import { openDm } from './dms/NewDmModal';
 
 type Row = { kind: 'header'; label: string } | { kind: 'member'; m: MemberDto; color?: string };
 
@@ -71,12 +74,28 @@ export default function MemberList({ serverId }: { serverId: string }) {
 }
 
 function MemberRow({ m, status, color }: { m: MemberDto; status: MemberDto['presence']; color?: string }) {
+  const navigate = useNavigate();
+  const me = useAuth((s) => s.user?.id);
+  const isMe = m.user.id === me;
+  // Clic en un miembro → abre (o reutiliza) el DM con esa persona.
+  async function message() {
+    if (isMe) return;
+    const dm = await openDm([m.user.id]);
+    await queryClient.invalidateQueries({ queryKey: qk.dms });
+    navigate(`/channels/@me/${dm.id}`);
+  }
   return (
-    <div className={`mx-2 flex items-center gap-3 rounded px-2 py-1.5 hover:bg-surface-3/60 ${status === 'OFFLINE' ? 'opacity-40' : ''}`}>
+    <button
+      type="button"
+      onClick={() => void message()}
+      disabled={isMe}
+      title={isMe ? undefined : `Enviar mensaje a ${m.nickname ?? displayName(m.user)}`}
+      className={`mx-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-surface-3/60 disabled:cursor-default ${status === 'OFFLINE' ? 'opacity-40' : ''}`}
+    >
       <Avatar user={m.user} size={32} presence={status} />
       <span className="truncate text-sm font-medium" style={{ color }}>
         {m.nickname ?? displayName(m.user)}
       </span>
-    </div>
+    </button>
   );
 }

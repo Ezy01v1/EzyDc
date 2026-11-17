@@ -156,5 +156,30 @@ export const OverwriteInput = z.object({
 });
 export type OverwriteInput = z.infer<typeof OverwriteInput>;
 
+// ───────── Fase 3a: DMs, no leídos, silenciar ─────────
+
+export const CreateDmInput = z.object({
+  /** 1 destinatario = DM; 2..9 = grupo privado (máx. 10 personas contándote). */
+  recipientIds: z.array(uuid).min(1).max(9),
+  name: z.string().trim().min(1).max(100).optional(),
+});
+export type CreateDmInput = z.infer<typeof CreateDmInput>;
+
+export const AckInput = z.object({ messageId: uuid });
+export type AckInput = z.infer<typeof AckInput>;
+
+export const NotificationSettingInput = z
+  .object({
+    muted: z.boolean().optional(),
+    level: z.enum(['ALL', 'MENTIONS', 'NONE']).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, 'Nada que actualizar');
+export type NotificationSettingInput = z.infer<typeof NotificationSettingInput>;
+
+/** Sintaxis de menciones en el contenido almacenado. */
+export const MENTION_USER_RE = /<@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>/g;
+export const MENTION_ROLE_RE = /<@&([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})>/g;
+export const MENTION_EVERYONE_RE = /(^|[^\w<])@everyone(?!\w)/;
+
 // Gateway
 export const ChannelSubscribeInput = z.object({ channelId: uuid });

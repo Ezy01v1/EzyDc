@@ -12,10 +12,18 @@ import type { ChannelDto, MemberDto, MessageDto, PresenceStatus } from './types'
  */
 export interface ServerToClientEvents {
   MESSAGE_CREATE: (m: MessageDto) => void;
-  MESSAGE_UPDATE: (m: { id: string; channelId: string; content: string; editedAt: string }) => void;
+  /** Mensaje completo: al editar pueden cambiar las menciones. */
+  MESSAGE_UPDATE: (m: MessageDto) => void;
   MESSAGE_DELETE: (m: { id: string; channelId: string }) => void;
-  /** Aviso mínimo para no leídos en canales a los que no estás suscrito. */
-  CHANNEL_ACTIVITY: (p: { serverId: string; channelId: string; messageId: string; authorId: string }) => void;
+  /** Aviso mínimo para no leídos en canales a los que no estás suscrito.
+   *  serverId null = DM o grupo (se envía a las salas user:* de los participantes). */
+  CHANNEL_ACTIVITY: (p: { serverId: string | null; channelId: string; messageId: string; authorId: string }) => void;
+  /** Te han mencionado (o es un DM): +1 al contador de ese canal. Sala user:*. */
+  MENTION_CREATE: (p: { serverId: string | null; channelId: string; messageId: string }) => void;
+  /** Leíste un canal en otra pestaña/dispositivo. Sala user:*. */
+  CHANNEL_ACK: (p: { channelId: string; messageId: string }) => void;
+  /** Cambió tu lista de DMs (nuevo grupo, te añadieron o saliste). Sala user:*. */
+  DM_CHANNELS_UPDATE: (p: { channelId: string }) => void;
   CHANNEL_CREATE: (c: ChannelDto) => void;
   CHANNEL_UPDATE: (c: ChannelDto) => void;
   CHANNEL_DELETE: (p: { id: string; serverId: string }) => void;

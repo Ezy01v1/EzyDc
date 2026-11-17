@@ -8,7 +8,9 @@ import { ChannelsModule } from './channels/channels.module';
 import { UserThrottlerGuard } from './common/throttler.guard';
 import { APP_CONFIG, type AppConfig } from './config/config';
 import { CoreModule } from './core/core.module';
+import { DmsModule } from './dms/dms.module';
 import { MessagesModule } from './messages/messages.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { MetricsModule } from './metrics/metrics.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -33,6 +35,8 @@ import { UsersModule } from './users/users.module';
     ChannelsModule,
     MessagesModule,
     RolesModule,
+    DmsModule,
+    NotificationsModule,
     RealtimeModule,
     MetricsModule,
   ],

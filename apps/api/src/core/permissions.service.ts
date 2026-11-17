@@ -206,7 +206,7 @@ export class PermissionsService {
    * Un canal es "público" si TODOS los miembros pueden verlo: @everyone tiene VIEW_CHANNEL
    * y ningún override lo deniega (los allow nunca quitan visibilidad).
    */
-  private async isPublic(meta: ChannelMeta): Promise<boolean> {
+  async isPublic(meta: ChannelMeta): Promise<boolean> {
     if (!meta.serverId) return false;
     if (meta.overwrites.some((o) => (BigInt(o.deny) & Permission.VIEW_CHANNEL) !== 0n)) return false;
     return hasPermission(await this.everyonePerms(meta.serverId), Permission.VIEW_CHANNEL);

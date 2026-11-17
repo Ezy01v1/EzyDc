@@ -4,9 +4,12 @@ import { Avatar } from '../../../components/Avatar';
 import { api } from '../../../lib/api';
 import { displayName, formatTime, shortTime } from '../../../lib/format';
 import { renderMarkdown } from '../../../lib/markdown';
+import { decodeMentions, encodeMentions, mentionsMe, roleCandidates, userCandidates } from '../../../lib/mentions';
+import { hex } from '../../../lib/roles';
 import { useAuth } from '../../../stores/auth';
 import { useLive } from '../../../stores/live';
 import { type ClientMessage, patchMessage, removeMessage } from '../messageCache';
+import { useChatContext } from './chatContext';
 
 /** memo: con virtualización + memo, un mensaje nuevo solo renderiza 1 fila. */
 export const MessageItem = memo(function MessageItem({
@@ -21,12 +24,31 @@ export const MessageItem = memo(function MessageItem({
   const qc = useQueryClient();
   const me = useAuth((s) => s.user?.id);
   const [editing, setEditing] = useState(false);
+  const ctx = useChatContext();
   const [draft, setDraft] = useState(m.content);
-  const body = useMemo(() => renderMarkdown(m.content), [m.content]);
+  const body = useMemo(
+    () =>
+      renderMarkdown(m.content, {
+        user: (id) => {
+          const u = m.mentions.find((x) => x.id === id) ?? ctx.people.find((x) => x.id === id);
+          return u ? (u.displayName ?? u.username) : undefined;
+        },
+        role: (id) => {
+          const r = ctx.roles.find((x) => x.id === id);
+          return r ? { name: r.name, color: r.color ? hex(r.color) : undefined } : undefined;
+        },
+      }),
+    [m.content, m.mentions, ctx.people, ctx.roles],
+  );
   const mine = m.author?.id === me;
+  const highlighted = mentionsMe(m, me, ctx.myRoleIds);
+  const startEdit = () => {
+    setDraft(decodeMentions(m.content, [...m.mentions, ...ctx.people], ctx.roles));
+    setEditing(true);
+  };
 
   async function saveEdit() {
-    const content = draft.trim();
+    const content = encodeMentions(draft.trim(), [...userCandidates([...m.mentions, ...ctx.people]), ...roleCandidates(ctx.roles)]);
     setEditing(false);
     if (!content || content === m.content) return;
     patchMessage(qc, m.channelId, m.id, { content }); // optimista
@@ -52,9 +74,9 @@ export const MessageItem = memo(function MessageItem({
 
   return (
     <article
-      className={`group relative flex gap-4 px-4 hover:bg-surface-0/30 ${grouped ? 'py-0.5' : 'mt-3 pt-1 pb-0.5'} ${
-        m.pending ? 'opacity-60' : ''
-      }`}
+      className={`group relative flex gap-4 px-4 ${
+        highlighted ? 'border-l-2 border-warn bg-warn/10 hover:bg-warn/15' : 'hover:bg-surface-0/30'
+      } ${grouped ? 'py-0.5' : 'mt-3 pt-1 pb-0.5'} ${m.pending ? 'opacity-60' : ''}`}
     >
       <div className="w-10 shrink-0">
         {grouped ? (
@@ -107,7 +129,7 @@ export const MessageItem = memo(function MessageItem({
         <div className="absolute -top-3 right-4 hidden gap-0.5 rounded-md border border-surface-0 bg-surface-2 p-0.5 shadow group-hover:flex">
           <ToolButton label="Responder" onClick={() => useLive.getState().set({ replyTo: m })}>↩</ToolButton>
           {mine && (
-            <ToolButton label="Editar" onClick={() => (setDraft(m.content), setEditing(true))}>
+            <ToolButton label="Editar" onClick={startEdit}>
               ✎
             </ToolButton>
           )}

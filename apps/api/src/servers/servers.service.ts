@@ -13,6 +13,7 @@ import {
   Permission,
   type PresenceStatus,
   type ServerDetail,
+  type ServerListItem,
   type ServerSummary,
 } from '@ezydc/shared';
 import { toChannelDto, toRoleDto, toServerSummary, userPublicSelect } from '../common/mappers';
@@ -33,12 +34,48 @@ export class ServersService {
     private readonly cache: CacheService,
   ) {}
 
-  listForUser(userId: string): Promise<ServerSummary[]> {
-    return this.prisma.server.findMany({
-      where: { members: { some: { userId } } },
-      select: { id: true, name: true, iconUrl: true, ownerId: true },
-      orderBy: { createdAt: 'asc' },
-    });
+  /**
+   * Servidores del usuario con su estado de no leídos. 3 consultas en total, sin importar
+   * cuántos servidores/canales haya; la visibilidad se calcula en memoria con permisos cacheados.
+   */
+  async listForUser(userId: string): Promise<ServerListItem[]> {
+    const [servers, states, settings] = await Promise.all([
+      this.prisma.server.findMany({
+        where: { members: { some: { userId } } },
+        select: {
+          id: true,
+          name: true,
+          iconUrl: true,
+          ownerId: true,
+          channels: {
+            where: { type: { in: ['TEXT', 'ANNOUNCEMENT'] }, lastMessageId: { not: null } },
+            select: { id: true, lastMessageId: true, overwrites: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.readState.findMany({ where: { userId } }),
+      this.prisma.notificationSetting.findMany({ where: { userId, muted: true } }),
+    ]);
+    const read = new Map(states.map((s) => [s.channelId, s]));
+    const muted = new Set(settings.map((s) => s.targetId));
+
+    return Promise.all(
+      servers.map(async ({ channels, ...s }) => {
+        const base = await this.perms.getBase(s.id, userId);
+        let unread = false;
+        let mentions = 0;
+        for (const c of channels) {
+          if (!base) break;
+          const p = computeChannelPermissions({ base: base.perms, serverId: s.id, userId, roleIds: base.roleIds, overwrites: c.overwrites });
+          if (!hasPermission(p, Permission.VIEW_CHANNEL)) continue;
+          const r = read.get(c.id);
+          mentions += r?.mentionCount ?? 0;
+          if (!muted.has(s.id) && !muted.has(c.id) && c.lastMessageId! > (r?.lastReadMessageId ?? '')) unread = true;
+        }
+        return { ...toServerSummary(s), unread, mentions };
+      }),
+    );
   }
 
   /** Crea servidor + rol @everyone + miembro dueño + categorías y canales por defecto, en una transacción. */
