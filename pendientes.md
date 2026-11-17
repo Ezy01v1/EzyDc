@@ -48,7 +48,7 @@ Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 - [x] Reacciones Unicode y personalizadas, idempotentes, en tiempo real; sumarse a una existente no requiere ADD_REACTIONS.
 - [x] Emojis personalizados por servidor (50 máx., 256 KB, `:nombre:` en el texto, pestaña Emojis en ajustes, USE_EXTERNAL_EMOJIS).
 - [x] Selector de emojis con carga perezosa (chunk aparte), búsqueda en español, recientes.
-- [ ] **CORS del bucket `dcezy`:** añadir `http://localhost:5300` (y luego el dominio de producción). Sin esto el navegador no puede subir.
+- [x] CORS del bucket `dcezy` para `http://localhost:5300` (verificado). Falta añadir el dominio de producción al desplegar.
 - [ ] Limpiar objetos huérfanos en R2: adjuntos subidos y nunca enviados, y archivos de canales/servidores borrados (hoy solo se borran al borrar el mensaje o el emoji). Tarea periódica que liste `att/` y cruce con `attachments`.
 - [ ] AVIF: los navegadores no codifican AVIF en canvas; si se quiere, usar Cloudflare Images o un worker.
 - [ ] Visor de imágenes a pantalla completa (hoy abre en pestaña nueva) y miniaturas para vídeos.
