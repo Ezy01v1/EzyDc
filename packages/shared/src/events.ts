@@ -26,6 +26,9 @@ export interface ServerToClientEvents {
   SERVER_DELETE: (p: { id: string }) => void;
   MEMBER_ADD: (p: { serverId: string; member: MemberDto }) => void;
   MEMBER_REMOVE: (p: { serverId: string; userId: string }) => void;
+  /** Cambió algún rol (crear/editar/borrar/reordenar): recargar detalle y permisos. */
+  ROLES_UPDATE: (p: { serverId: string }) => void;
+  MEMBER_UPDATE: (p: { serverId: string; userId: string; roleIds: string[] }) => void;
   TYPING_START: (p: { channelId: string; userId: string; username: string }) => void;
   PRESENCE_UPDATE: (p: { userId: string; status: PresenceStatus }) => void;
 }

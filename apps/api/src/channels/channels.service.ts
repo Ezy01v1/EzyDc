@@ -61,16 +61,16 @@ export class ChannelsService {
     });
     await this.perms.invalidateChannel(channelId);
     const dto = toChannelDto(ch);
-    this.realtime.emit(room.server(meta.serverId), 'CHANNEL_UPDATE', dto);
+    await this.perms.emitToChannelViewers(meta, 'CHANNEL_UPDATE', dto);
     return dto;
   }
 
   async remove(channelId: string, userId: string): Promise<void> {
     const meta = await this.perms.assertChannel(channelId, userId, Permission.MANAGE_CHANNELS);
     if (!meta.serverId) throw new BadRequestException('No es un canal de servidor');
+    await this.perms.emitToChannelViewers(meta, 'CHANNEL_DELETE', { id: channelId, serverId: meta.serverId });
     await this.prisma.channel.delete({ where: { id: channelId } });
     await this.perms.invalidateChannel(channelId);
-    this.realtime.emit(room.server(meta.serverId), 'CHANNEL_DELETE', { id: channelId, serverId: meta.serverId });
     this.realtime.clearRooms([room.channel(channelId)]);
   }
 

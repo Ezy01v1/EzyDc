@@ -1,4 +1,4 @@
-import type { MessageDto, ServerSummary, ServerToClientEvents } from '@ezydc/shared';
+import type { MemberDto, MessageDto, Page, ServerSummary, ServerToClientEvents } from '@ezydc/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
@@ -22,6 +22,8 @@ const SERVER_EVENTS = [
   'MEMBER_REMOVE',
   'TYPING_START',
   'PRESENCE_UPDATE',
+  'ROLES_UPDATE',
+  'MEMBER_UPDATE',
 ] as const satisfies readonly (keyof ServerToClientEvents)[];
 
 /** Conecta el socket y traduce eventos a la caché de TanStack Query / stores. */
@@ -91,6 +93,18 @@ export function useRealtime(): void {
       if (p.userId !== useAuth.getState().user?.id) useLive.getState().setTyping(p.channelId, p.userId, p.username);
     });
     s.on('PRESENCE_UPDATE', (p) => useLive.getState().setPresence(p.userId, p.status));
+    // Permisos cambiados: el detalle trae canales visibles y permisos efectivos recalculados.
+    s.on('ROLES_UPDATE', (p) => {
+      void qc.invalidateQueries({ queryKey: qk.server(p.serverId) });
+      void qc.invalidateQueries({ queryKey: qk.members(p.serverId) });
+      void qc.invalidateQueries({ queryKey: ['overwrites'] });
+    });
+    s.on('MEMBER_UPDATE', (p) => {
+      qc.setQueryData<Page<MemberDto>>(qk.members(p.serverId), (d) =>
+        d ? { ...d, items: d.items.map((m) => (m.user.id === p.userId ? { ...m, roleIds: p.roleIds } : m)) } : d,
+      );
+      if (p.userId === useAuth.getState().user?.id) void qc.invalidateQueries({ queryKey: qk.server(p.serverId) });
+    });
 
     // Latencia del WebSocket (presupuesto: < 100 ms).
     const ping = () => {

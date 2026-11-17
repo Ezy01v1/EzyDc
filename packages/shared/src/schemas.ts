@@ -104,5 +104,42 @@ export const CreateInviteInput = z.object({
 });
 export type CreateInviteInput = z.infer<typeof CreateInviteInput>;
 
+// ───────── Fase 2: roles y permisos ─────────
+
+/** Bitfield serializado como string decimal (BigInt no viaja en JSON). */
+const permissionString = z.string().regex(/^\d{1,20}$/, 'Permisos inválidos');
+const color = z.number().int().min(0).max(0xffffff);
+
+export const CreateRoleInput = z.object({
+  name: z.string().trim().min(1).max(100).default('nuevo rol'),
+  color: color.default(0),
+  permissions: permissionString.default('0'),
+  hoist: z.boolean().default(false),
+  mentionable: z.boolean().default(false),
+});
+export type CreateRoleInput = z.infer<typeof CreateRoleInput>;
+
+export const UpdateRoleInput = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    color: color.optional(),
+    permissions: permissionString.optional(),
+    hoist: z.boolean().optional(),
+    mentionable: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, 'Nada que actualizar');
+export type UpdateRoleInput = z.infer<typeof UpdateRoleInput>;
+
+/** Ids de rol de MAYOR a MENOR posición, sin @everyone. */
+export const ReorderRolesInput = z.array(uuid).min(1).max(250);
+export type ReorderRolesInput = z.infer<typeof ReorderRolesInput>;
+
+export const OverwriteInput = z.object({
+  type: z.enum(['ROLE', 'MEMBER']),
+  allow: permissionString,
+  deny: permissionString,
+});
+export type OverwriteInput = z.infer<typeof OverwriteInput>;
+
 // Gateway
 export const ChannelSubscribeInput = z.object({ channelId: uuid });

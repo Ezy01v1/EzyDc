@@ -46,7 +46,7 @@ Los tipos exactos están en [`packages/shared/src`](../packages/shared/src). Tod
 
 | Fase | Rutas |
 |---|---|
-| 2 Roles | `GET/POST/PATCH/DELETE /servers/:id/roles`, `PATCH /servers/:id/roles/positions`, `PUT/DELETE /servers/:id/members/:uid/roles/:rid`, `PUT/DELETE /channels/:id/overwrites/:targetId` |
+| 2 Roles ✅ | `POST/PATCH/DELETE /servers/:id/roles`, `PATCH /servers/:id/roles/positions`, `PUT/DELETE /servers/:id/members/:uid/roles/:rid`, `GET` y `PUT/DELETE /channels/:id/overwrites/:targetId` (requieren `MANAGE_ROLES`, jerarquía y no conceder bits que no tienes) |
 | 2 2FA | `POST /auth/2fa/setup`, `POST /auth/2fa/enable`, `POST /auth/2fa/disable`, `POST /auth/login/2fa` |
 | 3 DMs | `GET /users/me/channels`, `POST /users/me/channels` (`{ recipientIds }`), `PUT/DELETE /channels/:id/recipients/:uid`, `/users/me/relationships` |
 | 3 Notificaciones | `POST /channels/:id/ack` (`{ messageId }`), `GET /users/me/read-states`, `PUT /users/me/notification-settings/:targetId`, `POST /push/subscribe` |
@@ -92,6 +92,10 @@ Conexión: `io(WS_URL, { transports: ['websocket'], auth: { token } })` con el t
 | `MEMBER_ADD` / `MEMBER_REMOVE` | `srv:` | `{ serverId, member }` / `{ serverId, userId }` |
 | `TYPING_START` | `ch:` | `{ channelId, userId, username }` |
 | `PRESENCE_UPDATE` | `srv:` | `{ userId, status }` |
+| `ROLES_UPDATE` | `srv:` | `{ serverId }` — roles u overrides cambiaron: recargar detalle (sin filtrar datos de canales privados) |
+| `MEMBER_UPDATE` | `srv:` | `{ serverId, userId, roleIds }` |
+
+`CHANNEL_ACTIVITY`, `CHANNEL_UPDATE` y `CHANNEL_DELETE` solo se envían a los sockets que pueden ver el canal (difusión directa si el canal es público).
 
 ### Reconexión y sincronización incremental
 

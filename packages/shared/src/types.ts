@@ -54,8 +54,17 @@ export interface ServerDetail extends ServerSummary {
   roles: RoleDto[];
   /** Permisos del usuario a nivel servidor. */
   myPermissions: string;
+  /** Roles del usuario (para calcular su jerarquía en la UI). */
+  myRoleIds: string[];
   /** Permisos efectivos del usuario por canal visible. */
   channelPermissions: Record<string, string>;
+}
+
+export interface OverwriteDto {
+  targetId: string;
+  type: 'ROLE' | 'MEMBER';
+  allow: string;
+  deny: string;
 }
 
 export interface MemberDto {

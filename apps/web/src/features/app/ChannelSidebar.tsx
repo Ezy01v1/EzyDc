@@ -1,6 +1,6 @@
 import { type ChannelDto, hasPermission, Permission, type ServerDetail } from '@ezydc/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { type DragEvent, useMemo, useState } from 'react';
+import { type DragEvent, lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queryClient';
@@ -9,6 +9,10 @@ import { useLive } from '../../stores/live';
 import { CreateChannelModal } from './modals/CreateChannelModal';
 import { InviteModal } from './modals/InviteModal';
 import { UserPanel } from './UserPanel';
+
+// Pantallas de ajustes: chunks aparte, solo se descargan si se abren.
+const ServerSettings = lazy(() => import('./settings/ServerSettings'));
+const ChannelSettings = lazy(() => import('./settings/ChannelSettings'));
 
 interface Group {
   category: ChannelDto | null;
@@ -40,10 +44,16 @@ export function ChannelSidebar({
   const [inviting, setInviting] = useState(false);
   const [menu, setMenu] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [serverSettings, setServerSettings] = useState(false);
+  const [channelSettings, setChannelSettings] = useState<ChannelDto | null>(null);
 
   const perms = BigInt(server.myPermissions);
   const canManage = hasPermission(perms, Permission.MANAGE_CHANNELS);
   const canInvite = hasPermission(perms, Permission.CREATE_INVITE);
+  const canRoles = hasPermission(perms, Permission.MANAGE_ROLES);
+  const canEditChannel = (id: string) =>
+    hasPermission(BigInt(server.channelPermissions[id] ?? '0'), Permission.MANAGE_CHANNELS) ||
+    hasPermission(BigInt(server.channelPermissions[id] ?? '0'), Permission.MANAGE_ROLES);
   const isOwner = server.ownerId === me;
   const groups = useMemo(() => groupChannels(server.channels), [server.channels]);
 
@@ -105,6 +115,7 @@ export function ChannelSidebar({
                 Invitar gente
               </MenuItem>
             )}
+            {canRoles && <MenuItem onClick={() => (setMenu(false), setServerSettings(true))}>Ajustes del servidor</MenuItem>}
             {canManage && <MenuItem onClick={() => (setMenu(false), setCreatingIn(null))}>Crear canal</MenuItem>}
             <MenuItem onClick={leaveOrDelete} className="text-danger">
               {isOwner ? 'Eliminar servidor' : 'Abandonar servidor'}
@@ -142,7 +153,7 @@ export function ChannelSidebar({
                   onDragOver={(e) => dragId && e.preventDefault()}
                   onDrop={(e) => void onDrop(e, c)}
                   onClick={() => useLive.getState().set({ mobileSidebar: false })}
-                  className={`relative mb-0.5 flex items-center gap-1.5 rounded px-2 py-1.5 text-[0.95rem] ${
+                  className={`group/ch relative mb-0.5 flex items-center gap-1.5 rounded px-2 py-1.5 text-[0.95rem] ${
                     active
                       ? 'bg-surface-3 text-fg'
                       : isUnread
@@ -154,7 +165,20 @@ export function ChannelSidebar({
                   <span aria-hidden className="w-5 text-center text-fg-subtle">
                     {c.type === 'VOICE' ? '🔊' : c.type === 'ANNOUNCEMENT' ? '📢' : '#'}
                   </span>
-                  <span className="truncate">{c.name}</span>
+                  <span className="flex-1 truncate">{c.name}</span>
+                  {canEditChannel(c.id) && (
+                    <button
+                      title="Editar canal"
+                      aria-label={`Editar ${c.name}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setChannelSettings(c);
+                      }}
+                      className={`text-xs text-fg-subtle hover:text-fg ${active ? '' : 'invisible group-hover/ch:visible'}`}
+                    >
+                      ⚙
+                    </button>
+                  )}
                 </Link>
               );
             })}
@@ -167,6 +191,16 @@ export function ChannelSidebar({
         <CreateChannelModal serverId={server.id} parentId={creatingIn} onClose={() => setCreatingIn(undefined)} />
       )}
       {inviting && <InviteModal serverId={server.id} onClose={() => setInviting(false)} />}
+      <Suspense fallback={null}>
+        {serverSettings && <ServerSettings server={server} onClose={() => setServerSettings(false)} />}
+        {channelSettings && (
+          <ChannelSettings
+            server={server}
+            channel={server.channels.find((c) => c.id === channelSettings.id) ?? channelSettings}
+            onClose={() => setChannelSettings(null)}
+          />
+        )}
+      </Suspense>
     </aside>
   );
 }

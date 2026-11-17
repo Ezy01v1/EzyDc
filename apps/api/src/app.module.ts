@@ -12,6 +12,7 @@ import { MessagesModule } from './messages/messages.module';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { MetricsModule } from './metrics/metrics.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { RolesModule } from './roles/roles.module';
 import { ServersModule } from './servers/servers.module';
 import { UsersModule } from './users/users.module';
 
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     ServersModule,
     ChannelsModule,
     MessagesModule,
+    RolesModule,
     RealtimeModule,
     MetricsModule,
   ],

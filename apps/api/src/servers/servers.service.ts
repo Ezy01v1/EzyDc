@@ -105,6 +105,7 @@ export class ServersService {
       channels: channels.map(toChannelDto),
       roles: server.roles.map(toRoleDto),
       myPermissions: base.perms.toString(),
+      myRoleIds: base.roleIds,
       channelPermissions,
     };
   }

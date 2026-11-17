@@ -79,9 +79,9 @@ export class MessagesService {
     const dto = toMessageDto(msg, input.nonce);
     // Payload completo solo a quien está mirando el canal…
     this.realtime.emit(room.channel(channelId), 'MESSAGE_CREATE', dto);
-    // …y un aviso de pocos bytes al resto del servidor (no leídos).
+    // …y un aviso de pocos bytes al resto del servidor que PUEDA ver el canal (no leídos).
     if (meta.serverId) {
-      this.realtime.emit(room.server(meta.serverId), 'CHANNEL_ACTIVITY', {
+      await this.perms.emitToChannelViewers(meta, 'CHANNEL_ACTIVITY', {
         serverId: meta.serverId,
         channelId,
         messageId: msg.id,
