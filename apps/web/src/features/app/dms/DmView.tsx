@@ -30,6 +30,8 @@ export function DmView({ channelId }: { channelId?: string }) {
       myRoleIds: [],
       people: [...(dm?.recipients ?? []), ...(me ? [me] : [])],
       canMentionEveryone: false,
+      canAttach: true,
+      canReact: true,
     }),
     [dm?.recipients, me],
   );

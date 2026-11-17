@@ -1,6 +1,6 @@
 # Pendientes de ezyDC
 
-Estado al 16/11/2026: **Fases 1, 2, 2b y 3a completas y probadas** contra Neon (REST, tiempo real, UI).
+Estado al 16/11/2026: **Fases 1, 2, 2b, 3a y 3b completas y probadas** contra Neon (REST, tiempo real, UI).
 Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 
 ## Urgente / housekeeping
@@ -42,9 +42,18 @@ Detalle de cada fase en [docs/05-roadmap.md](docs/05-roadmap.md).
 - [ ] Nivel de notificación "solo menciones / nada" por servidor en la UI (la API ya lo admite).
 - [ ] Bandeja "Menciones recientes" (índice `message_user_mentions(user_id, message_id)` ya creado).
 
-## Fase 3b — Archivos, reacciones y emojis
-- [ ] Subida de archivos por URL firmada (R2), imágenes WebP/AVIF. **Necesita crear un bucket R2.**
-- [ ] Reacciones, emojis personalizados, picker con carga perezosa.
+## Fase 3b — Archivos, reacciones y emojis ✅
+- [x] Adjuntos subidos DIRECTO del navegador a R2 con URL firmada (tipo y tamaño dentro de la firma; vale de un solo uso verificado con HEAD). Hasta 10 archivos de 25 MB, botón, pegar y arrastrar, progreso.
+- [x] Imágenes medidas y recomprimidas a WebP en el navegador (>512 KB o >2560 px); hueco reservado → el chat no salta. Vídeo/audio en línea; HTML/SVG/PDF y otros se sirven como descarga.
+- [x] Reacciones Unicode y personalizadas, idempotentes, en tiempo real; sumarse a una existente no requiere ADD_REACTIONS.
+- [x] Emojis personalizados por servidor (50 máx., 256 KB, `:nombre:` en el texto, pestaña Emojis en ajustes, USE_EXTERNAL_EMOJIS).
+- [x] Selector de emojis con carga perezosa (chunk aparte), búsqueda en español, recientes.
+- [ ] **CORS del bucket `dcezy`:** añadir `http://localhost:5300` (y luego el dominio de producción). Sin esto el navegador no puede subir.
+- [ ] Limpiar objetos huérfanos en R2: adjuntos subidos y nunca enviados, y archivos de canales/servidores borrados (hoy solo se borran al borrar el mensaje o el emoji). Tarea periódica que liste `att/` y cruce con `attachments`.
+- [ ] AVIF: los navegadores no codifican AVIF en canvas; si se quiere, usar Cloudflare Images o un worker.
+- [ ] Visor de imágenes a pantalla completa (hoy abre en pestaña nueva) y miniaturas para vídeos.
+- [ ] Ver quién reaccionó (lista de usuarios por emoji).
+- [ ] Comprobar USE_EXTERNAL_EMOJIS también en el TEXTO del mensaje (hoy solo en reacciones).
 
 ## Fase 3c — Push, PWA y extras
 - [ ] Web Push (claves VAPID) para menciones con la app cerrada.

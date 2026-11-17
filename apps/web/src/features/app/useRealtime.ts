@@ -8,7 +8,8 @@ import { getCurrentChannel, getSocket } from '../../lib/socket';
 import { localAck, localMention, refreshServerBadges } from '../../lib/unread';
 import { useAuth } from '../../stores/auth';
 import { useLive } from '../../stores/live';
-import { lastConfirmedId, patchMessage, removeMessage, upsertMessage } from './messageCache';
+import { emojisKey } from '../../lib/emoji';
+import { applyReaction, lastConfirmedId, patchMessage, removeMessage, upsertMessage } from './messageCache';
 
 const SERVER_EVENTS = [
   'MESSAGE_CREATE',
@@ -28,6 +29,9 @@ const SERVER_EVENTS = [
   'MENTION_CREATE',
   'CHANNEL_ACK',
   'DM_CHANNELS_UPDATE',
+  'MESSAGE_REACTION_ADD',
+  'MESSAGE_REACTION_REMOVE',
+  'EMOJIS_UPDATE',
 ] as const satisfies readonly (keyof ServerToClientEvents)[];
 
 /** Conecta el socket y traduce eventos a la caché de TanStack Query / stores. */
@@ -80,6 +84,13 @@ export function useRealtime(): void {
     });
     s.on('MESSAGE_UPDATE', (m) => patchMessage(qc, m.channelId, m.id, m));
     s.on('MESSAGE_DELETE', (m) => removeMessage(qc, m.channelId, m.id));
+    s.on('MESSAGE_REACTION_ADD', (p) =>
+      applyReaction(qc, p.channelId, p.messageId, p.emoji, true, p.userId === useAuth.getState().user?.id, { url: p.url, name: p.name }),
+    );
+    s.on('MESSAGE_REACTION_REMOVE', (p) =>
+      applyReaction(qc, p.channelId, p.messageId, p.emoji, false, p.userId === useAuth.getState().user?.id),
+    );
+    s.on('EMOJIS_UPDATE', () => void qc.invalidateQueries({ queryKey: emojisKey }));
     s.on('CHANNEL_ACTIVITY', (p) => {
       const mine = p.authorId === useAuth.getState().user?.id;
       const viewing = p.channelId === getCurrentChannel() && document.hasFocus();

@@ -61,3 +61,43 @@ export function lastConfirmedId(qc: QueryClient, channelId: string): string | un
   const latest = d?.pages[0]?.filter((m) => !m.pending);
   return latest?.[latest.length - 1]?.id;
 }
+
+/**
+ * Suma/resta una reacción de forma idempotente: la versión optimista y el eco del socket
+ * (que también llega a mis otras pestañas) no cuentan dos veces.
+ */
+export function applyReaction(
+  qc: QueryClient,
+  channelId: string,
+  messageId: string,
+  emoji: string,
+  add: boolean,
+  isMe: boolean,
+  extra: { url?: string; name?: string } = {},
+): void {
+  qc.setQueryData<MessagePages>(qk.messages(channelId), (d) => {
+    if (!d) return d;
+    return {
+      ...d,
+      pages: d.pages.map((p) =>
+        p.map((m) => {
+          if (m.id !== messageId) return m;
+          const list = m.reactions ?? [];
+          const r = list.find((x) => x.emoji === emoji);
+          if (add) {
+            if (r && isMe && r.me) return m;
+            const reactions = r
+              ? list.map((x) => (x === r ? { ...x, count: x.count + 1, me: x.me || isMe } : x))
+              : [...list, { emoji, count: 1, me: isMe, ...extra }];
+            return { ...m, reactions };
+          }
+          if (!r || (isMe && !r.me)) return m;
+          const reactions = list
+            .map((x) => (x === r ? { ...x, count: x.count - 1, me: isMe ? false : x.me } : x))
+            .filter((x) => x.count > 0);
+          return { ...m, reactions };
+        }),
+      ),
+    };
+  });
+}

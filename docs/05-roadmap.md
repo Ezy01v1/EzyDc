@@ -19,7 +19,8 @@ Cada fase se puede desplegar sola. El esquema de BD ya contempla todas, así que
 - No leídos persistentes: `read_states` + `channels.last_message_id`; `POST /channels/:id/ack` con *debounce*; contadores por canal y servidor.
 - Menciones `@usuario`, `@rol`, `@everyone` (parseo en servidor, `message_*_mentions`, `mention_count`).
 - Web Push (VAPID, `web-push`) solo si el usuario no tiene sockets activos; silenciar canales/servidores.
-- Archivos: `POST /files/presign` → PUT directo a R2/Supabase Storage (límites de tamaño y MIME firmados en la URL), imágenes servidas como WebP/AVIF vía Cloudflare Images o transformaciones de Supabase.
+- Archivos ✅ (3b): `POST /channels/:id/attachments` → URLs firmadas → PUT directo a R2 (Content-Type y Content-Length firmados) → `POST /messages` con `uploadId` (vale de un solo uso, verificado con HEAD). Imágenes medidas y pasadas a WebP en el navegador.
+- Reacciones ✅ (3b): `PUT|DELETE /channels/:id/messages/:mid/reactions/:emoji/@me`; emojis personalizados `servers/:id/emojis` (imagen en `emojis/<id>` del CDN).
 - Reacciones y emojis personalizados; picker de emojis con `import()` perezoso.
 - Previews de enlaces (unfurl en servidor con timeout, caché Redis 24 h, bloqueo de IPs privadas contra SSRF).
 - Resaltado de código perezoso (`shiki` con `import()` solo si hay bloques).

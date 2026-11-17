@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { type KeyboardEvent, memo, useMemo, useState } from 'react';
 import { Avatar } from '../../../components/Avatar';
 import { api } from '../../../lib/api';
+import { decodeEmojis, encodeEmojis, useMyEmojis } from '../../../lib/emoji';
 import { displayName, formatTime, shortTime } from '../../../lib/format';
 import { renderMarkdown } from '../../../lib/markdown';
 import { decodeMentions, encodeMentions, mentionsMe, roleCandidates, userCandidates } from '../../../lib/mentions';
@@ -9,7 +10,10 @@ import { hex } from '../../../lib/roles';
 import { useAuth } from '../../../stores/auth';
 import { useLive } from '../../../stores/live';
 import { type ClientMessage, patchMessage, removeMessage } from '../messageCache';
+import { Attachments } from './Attachments';
 import { useChatContext } from './chatContext';
+import { QUICK_REACTIONS } from './emojiData';
+import { AddReactionButton, ReactionBar, toggleReaction } from './Reactions';
 
 /** memo: con virtualización + memo, un mensaje nuevo solo renderiza 1 fila. */
 export const MessageItem = memo(function MessageItem({
@@ -25,6 +29,7 @@ export const MessageItem = memo(function MessageItem({
   const me = useAuth((s) => s.user?.id);
   const [editing, setEditing] = useState(false);
   const ctx = useChatContext();
+  const { data: emojis = [] } = useMyEmojis();
   const [draft, setDraft] = useState(m.content);
   const body = useMemo(
     () =>
@@ -43,14 +48,18 @@ export const MessageItem = memo(function MessageItem({
   const mine = m.author?.id === me;
   const highlighted = mentionsMe(m, me, ctx.myRoleIds);
   const startEdit = () => {
-    setDraft(decodeMentions(m.content, [...m.mentions, ...ctx.people], ctx.roles));
+    setDraft(decodeEmojis(decodeMentions(m.content, [...m.mentions, ...ctx.people], ctx.roles)));
     setEditing(true);
   };
 
   async function saveEdit() {
-    const content = encodeMentions(draft.trim(), [...userCandidates([...m.mentions, ...ctx.people]), ...roleCandidates(ctx.roles)]);
+    const content = encodeEmojis(
+      encodeMentions(draft.trim(), [...userCandidates([...m.mentions, ...ctx.people]), ...roleCandidates(ctx.roles)]),
+      emojis,
+      ctx.serverId,
+    );
     setEditing(false);
-    if (!content || content === m.content) return;
+    if ((!content && !m.attachments.length) || content === m.content) return;
     patchMessage(qc, m.channelId, m.id, { content }); // optimista
     try {
       await api(`/channels/${m.channelId}/messages/${m.id}`, { method: 'PATCH', body: { content } });
@@ -118,15 +127,29 @@ export const MessageItem = memo(function MessageItem({
           </div>
         ) : (
           <div className="leading-relaxed break-words whitespace-pre-wrap text-fg/95">
-            {body}
+            {m.content && body}
             {m.editedAt && <span className="ml-1 text-[0.65rem] text-fg-subtle">(editado)</span>}
             {m.failed && <span className="ml-2 text-xs text-danger">No se pudo enviar</span>}
           </div>
+        )}
+        <Attachments items={m.attachments ?? []} />
+        {!m.pending && (
+          <ReactionBar channelId={m.channelId} messageId={m.id} reactions={m.reactions ?? []} canReact={ctx.canReact} serverId={ctx.serverId} />
         )}
       </div>
 
       {!m.pending && !editing && (
         <div className="absolute -top-3 right-4 hidden gap-0.5 rounded-md border border-surface-0 bg-surface-2 p-0.5 shadow group-hover:flex">
+          {ctx.canReact && (
+            <>
+              {QUICK_REACTIONS.slice(0, 3).map((e) => (
+                <ToolButton key={e} label={`Reaccionar ${e}`} onClick={() => void toggleReaction(qc, m.channelId, m.id, e, true)}>
+                  {e}
+                </ToolButton>
+              ))}
+              <AddReactionButton channelId={m.channelId} messageId={m.id} serverId={ctx.serverId} />
+            </>
+          )}
           <ToolButton label="Responder" onClick={() => useLive.getState().set({ replyTo: m })}>↩</ToolButton>
           {mine && (
             <ToolButton label="Editar" onClick={startEdit}>

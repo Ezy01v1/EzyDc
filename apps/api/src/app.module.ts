@@ -16,6 +16,8 @@ import { MetricsModule } from './metrics/metrics.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RolesModule } from './roles/roles.module';
 import { ServersModule } from './servers/servers.module';
+import { StorageModule } from './storage/storage.module';
+import { EmojisModule } from './emojis/emojis.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -31,7 +33,9 @@ import { UsersModule } from './users/users.module';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     AuthModule,
     UsersModule,
+    StorageModule,
     ServersModule,
+    EmojisModule,
     ChannelsModule,
     MessagesModule,
     RolesModule,

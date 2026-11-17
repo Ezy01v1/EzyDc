@@ -5,14 +5,19 @@ import {
   type MessageDto,
   type MessageQuery,
   Permission,
+  type RequestUploadsInput,
   type UpdateMessageInput,
+  type UploadTicket,
 } from '@ezydc/shared';
 import { messageInclude, toMessageDto } from '../common/mappers';
 import { PermissionsService } from '../core/permissions.service';
 import { PrismaService } from '../core/prisma.service';
 import { RealtimeService, room } from '../core/realtime.service';
 import { ReadStatesService } from '../notifications/read-states.service';
+import { StorageService } from '../storage/storage.service';
+import { type PendingUpload, safeFilename, UploadsService } from '../storage/uploads.service';
 import { MentionsService } from './mentions.service';
+import { ReactionsService } from './reactions.service';
 
 const TEXT_TYPES = new Set(['TEXT', 'ANNOUNCEMENT', 'DM', 'GROUP_DM', 'THREAD']);
 
@@ -24,7 +29,23 @@ export class MessagesService {
     private readonly realtime: RealtimeService,
     private readonly mentions: MentionsService,
     private readonly readStates: ReadStatesService,
+    private readonly reactions: ReactionsService,
+    private readonly uploads: UploadsService,
+    private readonly storage: StorageService,
   ) {}
+
+  /** Paso 1 de un adjunto: URLs firmadas para subir directo a R2 (paso 2: el navegador sube; paso 3: create()). */
+  async requestUploads(channelId: string, userId: string, input: RequestUploadsInput): Promise<UploadTicket[]> {
+    await this.perms.assertChannel(channelId, userId, Permission.SEND_MESSAGES, Permission.ATTACH_FILES);
+    return Promise.all(
+      input.files.map((f) => this.uploads.issue(userId, `ch:${channelId}`, (id) => `att/${channelId}/${id}/${safeFilename(f.filename)}`, f)),
+    );
+  }
+
+  private async withReactions(rows: Parameters<typeof toMessageDto>[0][], userId: string): Promise<MessageDto[]> {
+    const reactions = await this.reactions.forMessages(rows.map((m) => m.id), userId);
+    return rows.map((m) => toMessageDto(m, undefined, reactions.get(m.id)));
+  }
 
   /**
    * Historial por cursor. Devuelve SIEMPRE orden ascendente (antiguo → nuevo).
@@ -42,7 +63,7 @@ export class MessagesService {
         take: q.limit,
         include: messageInclude,
       });
-      return rows.map((m) => toMessageDto(m));
+      return this.withReactions(rows, userId);
     }
     const rows = await this.prisma.message.findMany({
       where: { channelId, ...(q.before ? { id: { lt: q.before } } : {}) },
@@ -50,7 +71,7 @@ export class MessagesService {
       take: q.limit,
       include: messageInclude,
     });
-    return rows.reverse().map((m) => toMessageDto(m));
+    return this.withReactions(rows.reverse(), userId);
   }
 
   async create(channelId: string, userId: string, input: CreateMessageInput): Promise<MessageDto> {
@@ -69,6 +90,17 @@ export class MessagesService {
       replyAuthorId = target.authorId;
     }
 
+    if (input.attachments.length && !hasPermission(perms, Permission.ATTACH_FILES)) {
+      throw new ForbiddenException('No puedes adjuntar archivos aquí');
+    }
+    // Cada vale es de un solo uso y se verifica contra R2 (existe y pesa lo autorizado).
+    const files: (PendingUpload & { width?: number; height?: number })[] = [];
+    for (const a of input.attachments) {
+      const p = await this.uploads.consume(userId, `ch:${channelId}`, a.uploadId);
+      const isMedia = p.contentType.startsWith('image/') || p.contentType.startsWith('video/');
+      files.push({ ...p, ...(isMedia ? { width: a.width, height: a.height } : {}) });
+    }
+
     const mentions = await this.mentions.resolve(meta, userId, perms, input.content, replyAuthorId);
     const isDm = !meta.serverId;
 
@@ -83,6 +115,16 @@ export class MessagesService {
           mentionEveryone: mentions.everyone,
           userMentions: { create: mentions.userIds.map((id) => ({ userId: id })) },
           roleMentions: { create: mentions.roleIds.map((id) => ({ roleId: id })) },
+          attachments: {
+            create: files.map((f) => ({
+              url: this.storage.publicUrl(f.key),
+              filename: f.filename,
+              contentType: f.contentType,
+              size: f.size,
+              width: f.width ?? null,
+              height: f.height ?? null,
+            })),
+          },
         },
         include: messageInclude,
       });
@@ -139,9 +181,11 @@ export class MessagesService {
       },
       include: messageInclude,
     });
-    const dto = toMessageDto(m);
-    this.realtime.emit(room.channel(channelId), 'MESSAGE_UPDATE', dto);
-    return dto;
+    // Sin "reactions": `me` depende de quién lo recibe; el cliente conserva las suyas.
+    const { reactions: _omit, ...update } = toMessageDto(m);
+    this.realtime.emit(room.channel(channelId), 'MESSAGE_UPDATE', update);
+    const own = await this.reactions.forMessages([m.id], userId);
+    return { ...update, reactions: own.get(m.id) ?? [] };
   }
 
   async remove(channelId: string, messageId: string, userId: string): Promise<void> {
@@ -149,13 +193,14 @@ export class MessagesService {
     if (!hasPermission(perms, Permission.VIEW_CHANNEL)) throw new NotFoundException('Canal no encontrado');
     const existing = await this.prisma.message.findFirst({
       where: { id: messageId, channelId },
-      select: { authorId: true },
+      select: { authorId: true, attachments: { select: { url: true } } },
     });
     if (!existing) throw new NotFoundException('Mensaje no encontrado');
     if (existing.authorId !== userId && !hasPermission(perms, Permission.MANAGE_MESSAGES)) {
       throw new ForbiddenException('Permisos insuficientes');
     }
     await this.prisma.message.delete({ where: { id: messageId } });
+    this.storage.deleteKeys(existing.attachments.map((a) => this.storage.keyFromUrl(a.url)).filter((k): k is string => !!k));
     this.realtime.emit(room.channel(channelId), 'MESSAGE_DELETE', { id: messageId, channelId });
   }
 }

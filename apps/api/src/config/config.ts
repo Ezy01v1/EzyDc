@@ -35,6 +35,13 @@ const EnvSchema = z.object({
   /** 32 bytes en base64 para cifrar secretos TOTP. Si falta, se deriva de JWT_ACCESS_SECRET. */
   TOTP_ENCRYPTION_KEY: optionalString,
   TOTP_ISSUER: z.string().default('ezyDC'),
+  /** Cloudflare R2 (S3). Si falta alguno, las subidas responden 503. */
+  R2_ACCOUNT_ID: optionalString,
+  R2_ACCESS_KEY_ID: optionalString,
+  R2_SECRET_ACCESS_KEY: optionalString,
+  R2_BUCKET: optionalString,
+  /** URL pública del bucket (r2.dev o dominio propio), sin "/" final. */
+  R2_PUBLIC_URL: optionalString,
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

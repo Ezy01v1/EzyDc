@@ -87,12 +87,31 @@ export const ReorderChannelsInput = z
   .max(500);
 export type ReorderChannelsInput = z.infer<typeof ReorderChannelsInput>;
 
-export const CreateMessageInput = z.object({
-  content: messageContent,
-  replyToId: uuid.optional(),
-  /** Id temporal del cliente para reconciliar el mensaje optimista. */
-  nonce: z.string().max(64).optional(),
-});
+export const MAX_ATTACHMENTS = 10;
+export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+export const MAX_EMOJI_BYTES = 256 * 1024;
+export const MAX_EMOJIS_PER_SERVER = 50;
+export const EMOJI_TYPES = ['image/png', 'image/gif', 'image/webp'] as const;
+
+export const CreateMessageInput = z
+  .object({
+    content: z.string().trim().max(4000).default(''),
+    replyToId: uuid.optional(),
+    /** Id temporal del cliente para reconciliar el mensaje optimista. */
+    nonce: z.string().max(64).optional(),
+    /** Archivos ya subidos a R2 con /attachments (uploadId) + dimensiones medidas en el cliente. */
+    attachments: z
+      .array(
+        z.object({
+          uploadId: uuid,
+          width: z.number().int().min(1).max(16384).optional(),
+          height: z.number().int().min(1).max(16384).optional(),
+        }),
+      )
+      .max(MAX_ATTACHMENTS)
+      .default([]),
+  })
+  .refine((m) => m.content.length > 0 || m.attachments.length > 0, { message: 'Mensaje vacío', path: ['content'] });
 export type CreateMessageInput = z.infer<typeof CreateMessageInput>;
 
 export const UpdateMessageInput = z.object({ content: messageContent });
@@ -183,3 +202,50 @@ export const MENTION_EVERYONE_RE = /(^|[^\w<])@everyone(?!\w)/;
 
 // Gateway
 export const ChannelSubscribeInput = z.object({ channelId: uuid });
+
+// ───────── Fase 3b: archivos, reacciones, emojis ─────────
+
+export const RequestUploadsInput = z.object({
+  files: z
+    .array(
+      z.object({
+        filename: z.string().trim().min(1).max(255),
+        size: z.number().int().min(1).max(MAX_ATTACHMENT_BYTES, 'Máximo 25 MB por archivo'),
+        contentType: z.string().trim().max(127).default('application/octet-stream'),
+      }),
+    )
+    .min(1)
+    .max(MAX_ATTACHMENTS),
+});
+export type RequestUploadsInput = z.infer<typeof RequestUploadsInput>;
+
+export const EmojiUploadInput = z.object({
+  contentType: z.enum(EMOJI_TYPES),
+  size: z.number().int().min(1).max(MAX_EMOJI_BYTES, 'Máximo 256 KB'),
+});
+export type EmojiUploadInput = z.infer<typeof EmojiUploadInput>;
+
+const emojiName = z
+  .string()
+  .trim()
+  .regex(/^[a-zA-Z0-9_]{2,32}$/, '2-32 caracteres: letras, números y "_"');
+export const CreateEmojiInput = z.object({ name: emojiName, uploadId: uuid });
+export type CreateEmojiInput = z.infer<typeof CreateEmojiInput>;
+export const UpdateEmojiInput = z.object({ name: emojiName });
+export type UpdateEmojiInput = z.infer<typeof UpdateEmojiInput>;
+
+/** Emoji Unicode (secuencia pictográfica corta) o personalizado "c:<uuid>". */
+export const ReactionEmoji = z
+  .string()
+  .max(64)
+  .refine(
+    (e) =>
+      /^c:[0-9a-f-]{36}$/.test(e) ||
+      (e.length <= 32 &&
+        /^[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Component}\u{FE0F}\u{200D}\u{20E3}]+$/u.test(e) &&
+        /\p{Extended_Pictographic}|\p{Regional_Indicator}|\u{20E3}/u.test(e)),
+    'Emoji no válido',
+  );
+
+/** Emoji personalizado en el texto: <:nombre:id> (o <a:nombre:id> animado). */
+export const CUSTOM_EMOJI_RE = /<(a?):(\w{2,32}):([0-9a-f-]{36})>/g;

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { customEmojiUrl } from './emoji';
 
 /**
  * Markdown mínimo y SEGURO: genera nodos React (texto escapado por React), nunca innerHTML.
@@ -58,7 +59,7 @@ function renderLines(text: string, nextKey: () => number): ReactNode[] {
 }
 
 const INLINE =
-  /(<@&?[0-9a-f-]{36}>|@everyone(?!\w))|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(~~[^~\n]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(https?:\/\/[^\s<>]+[^\s<>.,:;"')\]!?])/g;
+  /(<@&?[0-9a-f-]{36}>|@everyone(?!\w))|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(~~[^~\n]+~~)|(\*[^*\n]+\*|_[^_\n]+_)|(https?:\/\/[^\s<>]+[^\s<>.,:;"')\]!?])|(<a?:\w{2,32}:[0-9a-f-]{36}>)/g;
 
 function renderInline(text: string, seed: number): ReactNode[] {
   const out: ReactNode[] = [];
@@ -75,6 +76,7 @@ function renderInline(text: string, seed: number): ReactNode[] {
     else if (m[3]) out.push(<strong key={k}>{tok.slice(2, -2)}</strong>);
     else if (m[4]) out.push(<s key={k}>{tok.slice(2, -2)}</s>);
     else if (m[5]) out.push(<em key={k}>{tok.slice(1, -1)}</em>);
+    else if (m[7]) out.push(customEmoji(tok, k));
     else if (m[6])
       out.push(
         <a key={k} href={tok} target="_blank" rel="noopener noreferrer nofollow" className="text-accent hover:underline">
@@ -85,6 +87,14 @@ function renderInline(text: string, seed: number): ReactNode[] {
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
+}
+
+/** <:nombre:id> → imagen del CDN (si no hay CDN configurado, se deja el texto ":nombre:"). */
+function customEmoji(tok: string, key: string): ReactNode {
+  const [, name = '', id = ''] = /^<a?:(\w+):([0-9a-f-]{36})>$/.exec(tok) ?? [];
+  const url = customEmojiUrl(id);
+  if (!url) return `:${name}:`;
+  return <img key={key} src={url} alt={`:${name}:`} title={`:${name}:`} loading="lazy" className="inline-block h-[1.375em] w-[1.375em] object-contain align-[-0.3em]" />;
 }
 
 function mentionPill(tok: string, key: string): ReactNode {

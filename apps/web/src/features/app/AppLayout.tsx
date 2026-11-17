@@ -2,6 +2,7 @@ import type { ServerListItem } from '@ezydc/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { api } from '../../lib/api';
+import { usePublicConfig } from '../../lib/emoji';
 import { qk } from '../../lib/queryClient';
 import { ServerRail } from './ServerRail';
 import { ServerView } from './ServerView';
@@ -12,6 +13,7 @@ import { useUnreadTitle } from './useUnreadTitle';
 export default function AppLayout() {
   const { serverId, channelId } = useParams();
   useRealtime();
+  usePublicConfig(); // base del CDN para pintar emojis personalizados
   const servers = useQuery({ queryKey: qk.servers, queryFn: () => api<ServerListItem[]>('/servers') });
   useUnreadTitle(servers.data);
 

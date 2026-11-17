@@ -13,7 +13,12 @@ import type { ChannelDto, MemberDto, MessageDto, PresenceStatus } from './types'
 export interface ServerToClientEvents {
   MESSAGE_CREATE: (m: MessageDto) => void;
   /** Mensaje completo: al editar pueden cambiar las menciones. */
-  MESSAGE_UPDATE: (m: MessageDto) => void;
+  MESSAGE_UPDATE: (m: Omit<MessageDto, 'reactions'>) => void;
+  /** Sala ch:*. `url`/`name` solo en emojis personalizados. */
+  MESSAGE_REACTION_ADD: (p: { channelId: string; messageId: string; userId: string; emoji: string; url?: string; name?: string }) => void;
+  MESSAGE_REACTION_REMOVE: (p: { channelId: string; messageId: string; userId: string; emoji: string }) => void;
+  /** Cambió la lista de emojis del servidor. Sala srv:*. */
+  EMOJIS_UPDATE: (p: { serverId: string }) => void;
   MESSAGE_DELETE: (m: { id: string; channelId: string }) => void;
   /** Aviso mínimo para no leídos en canales a los que no estás suscrito.
    *  serverId null = DM o grupo (se envía a las salas user:* de los participantes). */

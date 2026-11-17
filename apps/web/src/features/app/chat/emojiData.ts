@@ -1,0 +1,136 @@
+/**
+ * Catálogo compacto de emojis Unicode (los más usados) con palabras clave para buscar.
+ * Va en el chunk del selector, que solo se descarga al abrirlo por primera vez.
+ */
+type Entry = readonly [emoji: string, keywords: string];
+
+export const EMOJI_CATEGORIES: readonly { id: string; label: string; icon: string; items: readonly Entry[] }[] = [
+  {
+    id: 'smileys',
+    label: 'Caras',
+    icon: '😀',
+    items: [
+      ['😀', 'sonrisa feliz grin smile'], ['😃', 'feliz alegre smile'], ['😄', 'risa feliz smile'], ['😁', 'sonrisa dientes grin'],
+      ['😆', 'risa laugh'], ['😅', 'sudor risa nervios sweat'], ['🤣', 'carcajada rofl'], ['😂', 'lagrimas risa joy lol'],
+      ['🙂', 'sonrisa leve slight'], ['🙃', 'al reves upside'], ['😉', 'guiño wink'], ['😊', 'sonrojo blush'],
+      ['😇', 'angel inocente halo'], ['🥰', 'amor corazones love'], ['😍', 'enamorado ojos corazon heart eyes'], ['🤩', 'estrellas wow star'],
+      ['😘', 'beso kiss'], ['😋', 'rico delicioso yum'], ['😛', 'lengua tongue'], ['😜', 'guiño lengua crazy'],
+      ['🤪', 'loco zany'], ['🤑', 'dinero money'], ['🤗', 'abrazo hug'], ['🤭', 'ups risa tapar'],
+      ['🤫', 'silencio shh'], ['🤔', 'pensando thinking hmm'], ['🤐', 'callado zipper'], ['🤨', 'ceja sospecha raised'],
+      ['😐', 'neutral'], ['😑', 'sin expresion'], ['😶', 'sin boca'], ['😏', 'picaro smirk'],
+      ['😒', 'molesto unamused'], ['🙄', 'ojos blanco roll eyes'], ['😬', 'mueca grimace'], ['😌', 'aliviado relieved'],
+      ['😔', 'pensativo triste pensive'], ['😪', 'sueño sleepy'], ['😴', 'dormido sleeping zzz'], ['😷', 'mascarilla enfermo mask'],
+      ['🤒', 'fiebre enfermo'], ['🤢', 'nauseas asco'], ['🤮', 'vomito'], ['🥵', 'calor hot'],
+      ['🥶', 'frio cold'], ['😵', 'mareado dizzy'], ['🤯', 'explota mente mind blown'], ['🤠', 'vaquero cowboy'],
+      ['🥳', 'fiesta party'], ['😎', 'gafas cool'], ['🤓', 'nerd'], ['🧐', 'monoculo'],
+      ['😕', 'confundido confused'], ['😟', 'preocupado worried'], ['🙁', 'triste leve'], ['😮', 'sorpresa wow'],
+      ['😲', 'asombro astonished'], ['😳', 'sonrojado flushed'], ['🥺', 'suplica pleading'], ['😢', 'llorar triste cry'],
+      ['😭', 'llanto sob'], ['😱', 'grito miedo scream'], ['😖', 'frustrado'], ['😞', 'decepcionado'],
+      ['😓', 'sudor frio'], ['😩', 'cansado weary'], ['😫', 'agotado tired'], ['🥱', 'bostezo yawn'],
+      ['😤', 'resoplar triunfo'], ['😡', 'enfadado rabia angry'], ['😠', 'enojado angry'], ['🤬', 'insultos'],
+      ['😈', 'diablo devil'], ['💀', 'calavera muerto skull'], ['💩', 'caca poop'], ['🤡', 'payaso clown'],
+      ['👻', 'fantasma ghost'], ['👽', 'alien'], ['🤖', 'robot'], ['😺', 'gato feliz cat'],
+    ],
+  },
+  {
+    id: 'people',
+    label: 'Gestos',
+    icon: '👍',
+    items: [
+      ['👍', 'like pulgar arriba si ok thumbs up'], ['👎', 'dislike pulgar abajo no'], ['👌', 'ok perfecto'], ['✌️', 'paz victoria'],
+      ['🤞', 'suerte dedos cruzados'], ['🤟', 'te quiero rock'], ['🤘', 'rock metal'], ['🤙', 'llamame shaka'],
+      ['👈', 'izquierda'], ['👉', 'derecha'], ['👆', 'arriba'], ['👇', 'abajo'],
+      ['☝️', 'uno arriba'], ['✋', 'mano alto'], ['👋', 'hola adios saludo wave'], ['🖐️', 'mano'],
+      ['👏', 'aplauso clap'], ['🙌', 'celebrar hurra'], ['👐', 'manos abiertas'], ['🤲', 'palmas'],
+      ['🤝', 'trato acuerdo handshake'], ['🙏', 'gracias por favor rezar pray'], ['💪', 'fuerza musculo strong'], ['🫡', 'saludo militar'],
+      ['👀', 'ojos mirar eyes'], ['🧠', 'cerebro brain'], ['🫶', 'corazon manos'], ['🤷', 'no se encoger shrug'],
+      ['🤦', 'facepalm'], ['🙋', 'mano levantada yo'], ['🙇', 'reverencia'], ['💅', 'uñas'],
+    ],
+  },
+  {
+    id: 'nature',
+    label: 'Naturaleza',
+    icon: '🐶',
+    items: [
+      ['🐶', 'perro dog'], ['🐱', 'gato cat'], ['🐭', 'raton'], ['🐹', 'hamster'], ['🐰', 'conejo'], ['🦊', 'zorro fox'],
+      ['🐻', 'oso bear'], ['🐼', 'panda'], ['🐨', 'koala'], ['🐯', 'tigre'], ['🦁', 'leon lion'], ['🐮', 'vaca'],
+      ['🐷', 'cerdo'], ['🐸', 'rana frog'], ['🐵', 'mono'], ['🐔', 'gallina'], ['🐧', 'pinguino'], ['🐦', 'pajaro'],
+      ['🦄', 'unicornio'], ['🐝', 'abeja'], ['🦋', 'mariposa'], ['🐢', 'tortuga'], ['🐍', 'serpiente'], ['🐙', 'pulpo'],
+      ['🐬', 'delfin'], ['🐳', 'ballena'], ['🦈', 'tiburon'], ['🌵', 'cactus'], ['🌲', 'arbol'], ['🍀', 'trebol suerte'],
+      ['🌸', 'flor cerezo'], ['🌹', 'rosa'], ['🌻', 'girasol'], ['🌈', 'arcoiris'], ['☀️', 'sol'], ['🌙', 'luna'],
+      ['⭐', 'estrella star'], ['⚡', 'rayo'], ['🔥', 'fuego fire lit'], ['❄️', 'nieve frio'], ['🌊', 'ola mar'], ['☔', 'lluvia'],
+    ],
+  },
+  {
+    id: 'food',
+    label: 'Comida',
+    icon: '🍕',
+    items: [
+      ['🍎', 'manzana'], ['🍌', 'platano banana'], ['🍉', 'sandia'], ['🍓', 'fresa'], ['🍒', 'cereza'], ['🍑', 'melocoton'],
+      ['🍍', 'piña'], ['🥑', 'aguacate'], ['🌶️', 'picante chile'], ['🌽', 'maiz'], ['🥕', 'zanahoria'], ['🍞', 'pan'],
+      ['🧀', 'queso'], ['🍔', 'hamburguesa'], ['🍟', 'papas fritas'], ['🍕', 'pizza'], ['🌮', 'taco'], ['🌯', 'burrito'],
+      ['🍣', 'sushi'], ['🍜', 'ramen'], ['🍩', 'dona donut'], ['🍪', 'galleta cookie'], ['🎂', 'pastel cumpleaños'], ['🍰', 'tarta'],
+      ['🍫', 'chocolate'], ['🍿', 'palomitas'], ['☕', 'cafe coffee'], ['🍵', 'te'], ['🍺', 'cerveza beer'], ['🍻', 'brindis'],
+      ['🍷', 'vino'], ['🥂', 'champan brindis'], ['🧃', 'jugo'], ['🧋', 'boba'],
+    ],
+  },
+  {
+    id: 'activity',
+    label: 'Actividad',
+    icon: '⚽',
+    items: [
+      ['⚽', 'futbol'], ['🏀', 'baloncesto'], ['🏈', 'futbol americano'], ['⚾', 'beisbol'], ['🎾', 'tenis'], ['🏐', 'voleibol'],
+      ['🎮', 'videojuego gaming'], ['🕹️', 'joystick'], ['🎲', 'dado'], ['♟️', 'ajedrez'], ['🎯', 'diana objetivo'], ['🎳', 'bolos'],
+      ['🏆', 'trofeo ganar'], ['🥇', 'oro primero'], ['🥈', 'plata'], ['🥉', 'bronce'], ['🎉', 'fiesta celebrar tada'], ['🎊', 'confeti'],
+      ['🎁', 'regalo'], ['🎈', 'globo'], ['🎵', 'musica nota'], ['🎶', 'musica notas'], ['🎤', 'microfono karaoke'], ['🎧', 'auriculares'],
+      ['🎸', 'guitarra'], ['🎹', 'piano'], ['🥁', 'tambor'], ['🎬', 'cine claqueta'], ['🎨', 'arte pintura'], ['📸', 'foto camara'],
+    ],
+  },
+  {
+    id: 'objects',
+    label: 'Objetos',
+    icon: '💡',
+    items: [
+      ['💻', 'portatil laptop'], ['🖥️', 'ordenador'], ['⌨️', 'teclado'], ['🖱️', 'raton'], ['📱', 'movil telefono'], ['☎️', 'telefono'],
+      ['💡', 'idea bombilla'], ['🔦', 'linterna'], ['📚', 'libros'], ['📝', 'nota escribir'], ['✏️', 'lapiz'], ['📌', 'chincheta pin'],
+      ['📎', 'clip'], ['🔒', 'candado cerrado'], ['🔑', 'llave'], ['🔨', 'martillo'], ['🛠️', 'herramientas'], ['⚙️', 'engranaje ajustes'],
+      ['🧪', 'probeta test'], ['🚀', 'cohete lanzamiento rocket ship'], ['✈️', 'avion'], ['🚗', 'coche'], ['🏠', 'casa'], ['⏰', 'alarma reloj'],
+      ['⌛', 'reloj arena'], ['💰', 'dinero bolsa'], ['💸', 'dinero volando'], ['📈', 'grafico sube'], ['📉', 'grafico baja'], ['🗑️', 'basura'],
+    ],
+  },
+  {
+    id: 'symbols',
+    label: 'Símbolos',
+    icon: '❤️',
+    items: [
+      ['❤️', 'corazon rojo amor heart'], ['🧡', 'corazon naranja'], ['💛', 'corazon amarillo'], ['💚', 'corazon verde'],
+      ['💙', 'corazon azul'], ['💜', 'corazon morado'], ['🖤', 'corazon negro'], ['🤍', 'corazon blanco'],
+      ['💔', 'corazon roto'], ['💕', 'corazones'], ['💯', 'cien 100 perfecto'], ['💢', 'enfado'],
+      ['💥', 'boom explosion'], ['💫', 'mareo estrella'], ['💬', 'bocadillo chat'], ['💤', 'dormir zzz'],
+      ['✅', 'check hecho si'], ['☑️', 'casilla'], ['✔️', 'correcto'], ['❌', 'x error no'],
+      ['❎', 'cruz'], ['⚠️', 'aviso cuidado warning'], ['⛔', 'prohibido'], ['🚫', 'no permitido'],
+      ['❓', 'pregunta'], ['❗', 'exclamacion'], ['‼️', 'doble exclamacion'], ['⁉️', 'interrobang'],
+      ['➕', 'mas plus'], ['➖', 'menos'], ['🔴', 'rojo circulo'], ['🟢', 'verde circulo'],
+      ['🔵', 'azul circulo'], ['🟡', 'amarillo circulo'], ['🆗', 'ok'], ['🆕', 'nuevo new'],
+      ['1️⃣', 'uno'], ['2️⃣', 'dos'], ['3️⃣', 'tres'], ['🔟', 'diez'],
+    ],
+  },
+  {
+    id: 'flags',
+    label: 'Banderas',
+    icon: '🏳️',
+    items: [
+      ['🏁', 'meta carrera'], ['🚩', 'bandera roja'], ['🏳️‍🌈', 'arcoiris pride'], ['🇪🇸', 'españa spain'],
+      ['🇲🇽', 'mexico'], ['🇦🇷', 'argentina'], ['🇨🇴', 'colombia'], ['🇨🇱', 'chile'],
+      ['🇵🇪', 'peru'], ['🇻🇪', 'venezuela'], ['🇺🇾', 'uruguay'], ['🇪🇨', 'ecuador'],
+      ['🇧🇴', 'bolivia'], ['🇵🇾', 'paraguay'], ['🇨🇺', 'cuba'], ['🇩🇴', 'dominicana'],
+      ['🇨🇷', 'costa rica'], ['🇬🇹', 'guatemala'], ['🇭🇳', 'honduras'], ['🇸🇻', 'el salvador'],
+      ['🇳🇮', 'nicaragua'], ['🇵🇦', 'panama'], ['🇵🇷', 'puerto rico'], ['🇺🇸', 'estados unidos usa'],
+      ['🇧🇷', 'brasil'], ['🇬🇧', 'reino unido uk'], ['🇫🇷', 'francia'], ['🇩🇪', 'alemania'],
+      ['🇮🇹', 'italia'], ['🇵🇹', 'portugal'], ['🇯🇵', 'japon'], ['🇰🇷', 'corea'],
+    ],
+  },
+];
+
+/** Atajos rápidos para reaccionar con un clic. */
+export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉'] as const;

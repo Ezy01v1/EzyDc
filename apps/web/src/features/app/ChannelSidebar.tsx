@@ -53,6 +53,7 @@ export function ChannelSidebar({
   const canManage = hasPermission(perms, Permission.MANAGE_CHANNELS);
   const canInvite = hasPermission(perms, Permission.CREATE_INVITE);
   const canRoles = hasPermission(perms, Permission.MANAGE_ROLES);
+  const canEmojis = hasPermission(perms, Permission.MANAGE_EMOJIS);
   const canEditChannel = (id: string) =>
     hasPermission(BigInt(server.channelPermissions[id] ?? '0'), Permission.MANAGE_CHANNELS) ||
     hasPermission(BigInt(server.channelPermissions[id] ?? '0'), Permission.MANAGE_ROLES);
@@ -117,7 +118,7 @@ export function ChannelSidebar({
                 Invitar gente
               </MenuItem>
             )}
-            {canRoles && <MenuItem onClick={() => (setMenu(false), setServerSettings(true))}>Ajustes del servidor</MenuItem>}
+            {(canRoles || canEmojis) && <MenuItem onClick={() => (setMenu(false), setServerSettings(true))}>Ajustes del servidor</MenuItem>}
             {canManage && <MenuItem onClick={() => (setMenu(false), setCreatingIn(null))}>Crear canal</MenuItem>}
             <MenuItem onClick={() => (setMenu(false), void toggleMute(server.id, !serverMuted))}>
               {serverMuted ? 'Dejar de silenciar' : 'Silenciar servidor'}

@@ -90,7 +90,51 @@ export interface MessageDto {
   /** Roles mencionados con <@&id>. */
   mentionRoleIds: string[];
   mentionEveryone: boolean;
+  attachments: AttachmentDto[];
+  /** Agrupadas por emoji, en orden de primera reacción. `me` depende de quién pide. */
+  reactions: ReactionDto[];
   nonce?: string;
+}
+
+export interface AttachmentDto {
+  id: string;
+  url: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+}
+
+export interface ReactionDto {
+  /** Unicode, o "c:<emojiId>" si es personalizado. */
+  emoji: string;
+  count: number;
+  me: boolean;
+  /** Imagen y nombre del emoji personalizado. */
+  url?: string;
+  name?: string;
+}
+
+export interface EmojiDto {
+  id: string;
+  serverId: string;
+  name: string;
+  animated: boolean;
+  url: string;
+}
+
+/** Subida directa a R2: PUT a uploadUrl con EXACTAMENTE estas cabeceras. */
+export interface UploadTicket {
+  uploadId: string;
+  uploadUrl: string;
+  headers: Record<string, string>;
+}
+
+export interface PublicConfig {
+  /** Base pública de R2 (null si los archivos no están configurados). */
+  cdnUrl: string | null;
+  maxUploadBytes: number;
 }
 
 /** DM 1:1 o grupo privado. `recipients` excluye al propio usuario. */

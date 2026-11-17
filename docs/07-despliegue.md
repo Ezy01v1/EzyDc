@@ -72,7 +72,20 @@ Crea un proyecto en cloud.livekit.io y añade al backend `LIVEKIT_URL`, `LIVEKIT
 
 ## 6. Archivos — Cloudflare R2 (Fase 3)
 
-Bucket + token S3 con permiso de escritura solo sobre ese bucket. CORS del bucket: `PUT` desde tu dominio web. Variables `R2_*` en el backend; dominio público (o `r2.dev`) en `R2_PUBLIC_URL`.
+Bucket + token S3 con permiso de escritura solo sobre ese bucket. CORS del bucket (R2 → bucket → Settings → CORS Policy):
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:5300", "https://TU-DOMINIO-WEB"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["content-type", "cache-control", "content-disposition"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+ Variables `R2_*` en el backend; dominio público (o `r2.dev`) en `R2_PUBLIC_URL`.
 
 ## 7. Verificación tras desplegar
 

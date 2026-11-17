@@ -37,6 +37,8 @@ export function ServerView({ serverId, channelId }: { serverId: string; channelI
       myRoleIds: server.data?.myRoleIds ?? [],
       people: members.data?.items.map((m) => m.user) ?? [],
       canMentionEveryone: hasPermission(channelPerms, Permission.MENTION_EVERYONE),
+      canAttach: hasPermission(channelPerms, Permission.ATTACH_FILES),
+      canReact: hasPermission(channelPerms, Permission.ADD_REACTIONS),
     }),
     [serverId, server.data?.roles, server.data?.myRoleIds, members.data, channelPerms],
   );

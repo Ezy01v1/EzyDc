@@ -1,4 +1,4 @@
-import type { ChannelDto, MessageDto, RoleDto, ServerSummary, UserPublic, UserSelf } from '@ezydc/shared';
+import type { ChannelDto, MessageDto, ReactionDto, RoleDto, ServerSummary, UserPublic, UserSelf } from '@ezydc/shared';
 import type { Channel, Prisma, Role, Server, User } from '@prisma/client';
 
 /** Selects mínimos: nunca traer columnas que no se envían (passwordHash, totpSecret...). */
@@ -14,6 +14,10 @@ export const messageInclude = {
   replyTo: { select: { id: true, content: true, author: { select: userPublicSelect } } },
   userMentions: { select: { user: { select: userPublicSelect } } },
   roleMentions: { select: { roleId: true } },
+  attachments: {
+    select: { id: true, url: true, filename: true, contentType: true, size: true, width: true, height: true },
+    orderBy: { id: 'asc' },
+  },
 } satisfies Prisma.MessageInclude;
 
 type MessageRow = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
@@ -67,7 +71,7 @@ export function toRoleDto(r: Role): RoleDto {
   };
 }
 
-export function toMessageDto(m: MessageRow, nonce?: string): MessageDto {
+export function toMessageDto(m: MessageRow, nonce?: string, reactions: ReactionDto[] = []): MessageDto {
   return {
     id: m.id,
     channelId: m.channelId,
@@ -82,6 +86,8 @@ export function toMessageDto(m: MessageRow, nonce?: string): MessageDto {
     mentions: m.userMentions.map((x) => x.user),
     mentionRoleIds: m.roleMentions.map((x) => x.roleId),
     mentionEveryone: m.mentionEveryone,
+    attachments: m.attachments,
+    reactions,
     ...(nonce ? { nonce } : {}),
   };
 }

@@ -53,6 +53,17 @@ export class CacheService implements OnModuleDestroy {
     else keys.forEach((k) => this.mem.delete(k));
   }
 
+  /** Lee y borra de forma atómica (un valor de un solo uso no se puede consumir dos veces). */
+  async take<T>(key: string): Promise<T | null> {
+    let raw: string | null;
+    if (this.redis) raw = await this.redis.getdel(key);
+    else {
+      raw = this.memGet(key);
+      this.mem.delete(key);
+    }
+    return raw === null ? null : (JSON.parse(raw) as T);
+  }
+
   /** Contador atómico (presencia: nº de conexiones por usuario). */
   async incr(key: string, delta: 1 | -1, ttlSeconds: number): Promise<number> {
     if (this.redis) {
